@@ -58,19 +58,21 @@ ngf = 128
 #     d_params = [w1, b1, w2, b2, w3, b3]
 #     return y_data, y_generated, d_params
 
-def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", norm=True):
+def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
         w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape(-1), o_d], 
             initializer=tf.truncated_normal_intializer(stddev=stddev))
         conv = tf.nn.conv2d(inputconv,filter=w,strides=[1,s_w,s_h,1],padding=padding)
         biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
         conv = tf.nn.bias_add(conv,biases)
-        if norm:
+        if do_norm:
             dims = conv.get_shape()
             scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],tf.constant_initializer(1))
             beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],tf.constant_initializer(0))
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
+        if do_relu:
+            conv = tf.nn.relu(conv,0)
 
     return conv
 
