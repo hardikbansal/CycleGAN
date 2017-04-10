@@ -76,6 +76,14 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
 
     return conv
 
+def build_resnet_block(inputres, dim, name="resnet"):
+    out_res = inputres
+    with.tf.variable_scope(name):
+        out_res = general_conv2d(inputres, dim, 3, 3, 1, 1, 0.02, "SAME","c1")
+        out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "SAME","c2",do_relu=False)
+
+    return tf.nn.relu(out_res + inputres)
+
 
 
 def build_generator_resnet_6blocks(inputgen, name="generator"):
