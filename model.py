@@ -93,6 +93,7 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,"SAME","c1")
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,None,"c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,None,"c3")
+        
 
 
 
