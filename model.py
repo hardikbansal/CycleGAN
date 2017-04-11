@@ -27,36 +27,36 @@ batch_size = 256
 ngf = 128
 
 
-# def build_generator(z_prior):
-#     w1 = tf.Variable(tf.truncated_normal([z_size, h1_size], stddev=0.1), name="g_w1", dtype=tf.float32)
-#     b1 = tf.Variable(tf.zeros([h1_size]), name="g_b1", dtype=tf.float32)
-#     h1 = tf.nn.relu(tf.matmul(z_prior, w1) + b1)
-#     w2 = tf.Variable(tf.truncated_normal([h1_size, h2_size], stddev=0.1), name="g_w2", dtype=tf.float32)
-#     b2 = tf.Variable(tf.zeros([h2_size]), name="g_b2", dtype=tf.float32)
-#     h2 = tf.nn.relu(tf.matmul(h1, w2) + b2)
-#     w3 = tf.Variable(tf.truncated_normal([h2_size, img_size], stddev=0.1), name="g_w3", dtype=tf.float32)
-#     b3 = tf.Variable(tf.zeros([img_size]), name="g_b3", dtype=tf.float32)
-#     h3 = tf.matmul(h2, w3) + b3
-#     x_generate = tf.nn.tanh(h3)
-#     g_params = [w1, b1, w2, b2, w3, b3]
-#     return x_generate, g_params
+def build_generator(z_prior):
+    w1 = tf.Variable(tf.truncated_normal([z_size, h1_size], stddev=0.1), name="g_w1", dtype=tf.float32)
+    b1 = tf.Variable(tf.zeros([h1_size]), name="g_b1", dtype=tf.float32)
+    h1 = tf.nn.relu(tf.matmul(z_prior, w1) + b1)
+    w2 = tf.Variable(tf.truncated_normal([h1_size, h2_size], stddev=0.1), name="g_w2", dtype=tf.float32)
+    b2 = tf.Variable(tf.zeros([h2_size]), name="g_b2", dtype=tf.float32)
+    h2 = tf.nn.relu(tf.matmul(h1, w2) + b2)
+    w3 = tf.Variable(tf.truncated_normal([h2_size, img_size], stddev=0.1), name="g_w3", dtype=tf.float32)
+    b3 = tf.Variable(tf.zeros([img_size]), name="g_b3", dtype=tf.float32)
+    h3 = tf.matmul(h2, w3) + b3
+    x_generate = tf.nn.tanh(h3)
+    g_params = [w1, b1, w2, b2, w3, b3]
+    return x_generate, g_params
 
 
-# def build_discriminator(x_data, x_generated, keep_prob):
-#     x_in = tf.concat(0, [x_data, x_generated])
-#     w1 = tf.Variable(tf.truncated_normal([img_size, h2_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-#     b1 = tf.Variable(tf.zeros([h2_size]), name="d_b1", dtype=tf.float32)
-#     h1 = tf.nn.dropout(tf.nn.relu(tf.matmul(x_in, w1) + b1), keep_prob)
-#     w2 = tf.Variable(tf.truncated_normal([h2_size, h1_size], stddev=0.1), name="d_w2", dtype=tf.float32)
-#     b2 = tf.Variable(tf.zeros([h1_size]), name="d_b2", dtype=tf.float32)
-#     h2 = tf.nn.dropout(tf.nn.relu(tf.matmul(h1, w2) + b2), keep_prob)
-#     w3 = tf.Variable(tf.truncated_normal([h1_size, 1], stddev=0.1), name="d_w3", dtype=tf.float32)
-#     b3 = tf.Variable(tf.zeros([1]), name="d_b3", dtype=tf.float32)
-#     h3 = tf.matmul(h2, w3) + b3
-#     y_data = tf.nn.sigmoid(tf.slice(h3, [0, 0], [batch_size, -1], name=None))
-#     y_generated = tf.nn.sigmoid(tf.slice(h3, [batch_size, 0], [-1, -1], name=None))
-#     d_params = [w1, b1, w2, b2, w3, b3]
-#     return y_data, y_generated, d_params
+def build_discriminator(x_data, x_generated, keep_prob):
+    x_in = tf.concat(0, [x_data, x_generated])
+    w1 = tf.Variable(tf.truncated_normal([img_size, h2_size], stddev=0.1), name="d_w1", dtype=tf.float32)
+    b1 = tf.Variable(tf.zeros([h2_size]), name="d_b1", dtype=tf.float32)
+    h1 = tf.nn.dropout(tf.nn.relu(tf.matmul(x_in, w1) + b1), keep_prob)
+    w2 = tf.Variable(tf.truncated_normal([h2_size, h1_size], stddev=0.1), name="d_w2", dtype=tf.float32)
+    b2 = tf.Variable(tf.zeros([h1_size]), name="d_b2", dtype=tf.float32)
+    h2 = tf.nn.dropout(tf.nn.relu(tf.matmul(h1, w2) + b2), keep_prob)
+    w3 = tf.Variable(tf.truncated_normal([h1_size, 1], stddev=0.1), name="d_w3", dtype=tf.float32)
+    b3 = tf.Variable(tf.zeros([1]), name="d_b3", dtype=tf.float32)
+    h3 = tf.matmul(h2, w3) + b3
+    y_data = tf.nn.sigmoid(tf.slice(h3, [0, 0], [batch_size, -1], name=None))
+    y_generated = tf.nn.sigmoid(tf.slice(h3, [batch_size, 0], [-1, -1], name=None))
+    d_params = [w1, b1, w2, b2, w3, b3]
+    return y_data, y_generated, d_params
 
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
@@ -94,6 +94,22 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,None,"c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,None,"c3")
 
+        o_r1 = build_resnet_block(o_c3, ngf*4, "r1")
+        o_r2 = build_resnet_block(o_r1, ngf*4, "r2")
+        o_r3 = build_resnet_block(o_r2, ngf*4, "r3")
+        o_r4 = build_resnet_block(o_r3, ngf*4, "r4")
+        o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
+        o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
+
+        o_c4 = general_conv2d(o_r6, ngf*2, ks, ks, 2, 2, 0.02,None,"c4")
+        o_c5 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,None,"c5")
+        o_c6 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,None,"c5",do_relu="False")
+
+        # Adding the tanh layer
+
+        out_gen = tf.nn.tanh(o_c6,"t1")
+
+        
 
 
 
