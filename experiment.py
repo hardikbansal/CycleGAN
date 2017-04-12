@@ -140,11 +140,15 @@ def train():
     sess = tf.Session()
     sess.run(init)
 
+    writer = tf.summary.FileWriter("output/1")
+
     for i in range(0,2):
         for j in range(0,10):
             print("next_epoch")
             x_value, _ = mnist.train.next_batch(batch_size)
             sess.run(g_trainer,feed_dict={x_data:x_value,y_data:x_value})
+
+    writer.add_graph(sess.add_graph)
 
 
 
