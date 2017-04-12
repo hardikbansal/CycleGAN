@@ -61,7 +61,7 @@ ngf = 128
 
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
-        w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape(-1), o_d], 
+        w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
             initializer=tf.truncated_normal_intializer(stddev=stddev))
         conv = tf.nn.conv2d(inputconv,filter=w,strides=[1,s_w,s_h,1],padding=padding)
         biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
@@ -122,10 +122,10 @@ def train():
 
     mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-    x_data = tf.placeholder(tf.float32, [batch_size, x_height, x_width, x_dim], name="x_data")
-    x_sample = tf.placeholder(tf.float32, [sample_size, x_height, x_width, x_dim], name="x_sample")
+    x_data = tf.placeholder(tf.float32, [batch_size, img_height, img_width, 3], name="x_data")
+    x_sample = tf.placeholder(tf.float32, [sample_size, img_height, img_width, 3], name="x_sample")
 
-    y_data = tf.placeholder(tf.float32, [batch_size, x_height, x_width, x_dim], name="y_data")
+    y_data = tf.placeholder(tf.float32, [batch_size, img_height, img_width, 3], name="y_data")
 
     x_generated = build_generator_resnet_6blocks(x_data,"g_1")
 
