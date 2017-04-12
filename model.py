@@ -109,6 +109,8 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
 
         out_gen = tf.nn.tanh(o_c6,"t1")
 
+    return out_gen
+
         
 
 
