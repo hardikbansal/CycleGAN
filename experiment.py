@@ -10,6 +10,7 @@ import shutil
 
 img_height = 28
 img_width = 28
+img_layer = 1
 img_size = img_height * img_width
 
 to_train = True
@@ -62,18 +63,18 @@ ngf = 128
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
         w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
-            initializer=tf.truncated_normal_intializer(stddev=stddev))
+            initializer=tf.truncated_normal_initializer(stddev=stddev))
         conv = tf.nn.conv2d(inputconv,filter=w,strides=[1,s_w,s_h,1],padding=padding)
         biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
         conv = tf.nn.bias_add(conv,biases)
         if do_norm:
             dims = conv.get_shape()
-            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],tf.constant_initializer(1))
-            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],tf.constant_initializer(0))
+            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
+            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv,0)
+            conv = tf.nn.relu(conv,"relu")
 
     return conv
 
@@ -83,8 +84,8 @@ def build_resnet_block(inputres, dim, name="resnet"):
         out_res = general_conv2d(inputres, dim, 3, 3, 1, 1, 0.02, "SAME","c1")
         out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "SAME","c2",do_relu=False)
 
-    return tf.nn.relu(out_res + inputres)
-
+        out_res = tf.nn.relu(out_res + inputres)
+    return out_res
 
 
 def build_generator_resnet_6blocks(inputgen, name="generator"):
@@ -104,7 +105,7 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
 
         o_c4 = general_conv2d(o_r6, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
         o_c5 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
-        o_c6 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,"SAME","c5",do_relu="False")
+        o_c6 = general_conv2d(o_c5, ngf, ks, ks, 2, 2, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
 
@@ -122,33 +123,33 @@ def train():
 
     mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
-    x_data = tf.placeholder(tf.float32, [batch_size, img_height, img_width, 3], name="x_data")
-    x_sample = tf.placeholder(tf.float32, [sample_size, img_height, img_width, 3], name="x_sample")
+    x_data = tf.placeholder(tf.float32, shape=(batch_size, img_height, img_width, img_layer), name="x_data")
+    # x_sample = tf.placeholder(tf.float32, [sample_size, img_height, img_width, img_layer], name="x_sample")
 
-    y_data = tf.placeholder(tf.float32, [batch_size, img_height, img_width, 3], name="y_data")
+    # y_data = tf.placeholder(tf.float32, [batch_size, img_height, img_width, img_layer], name="y_data")
 
     x_generated = build_generator_resnet_6blocks(x_data,"g_1")
 
-    g_loss = tf.reduce_sum(x_generated-y_data)
+    g_loss = tf.reduce_sum(x_generated)
 
-    images,labels = load_mnist()
 
     g_trainer = tf.train.AdamOptimizer(0.001).minimize(g_loss,var_list=tf.trainable_variables())
 
-    init = tf.initialize_all_variables()
+    init = tf.global_variables_initializer()
 
     sess = tf.Session()
     sess.run(init)
 
     writer = tf.summary.FileWriter("output/1")
 
-    for i in range(0,2):
+    for i in range(0,1):
         for j in range(0,10):
             print("next_epoch")
             x_value, _ = mnist.train.next_batch(batch_size)
-            sess.run(g_trainer,feed_dict={x_data:x_value,y_data:x_value})
+            x_value = tf.reshape(x_value,[batch_size,img_height, img_width, img_layer])
+            sess.run(g_trainer,feed_dict={x_data:x_value.eval(session=sess)})
 
-    writer.add_graph(sess.add_graph)
+    writer.add_graph(sess.graph)
 
 
 
