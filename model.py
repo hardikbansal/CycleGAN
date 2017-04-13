@@ -60,19 +60,37 @@ def build_discriminator(x_data, x_generated, keep_prob):
 
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
-        w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape(-1), o_d], 
-            initializer=tf.truncated_normal_intializer(stddev=stddev))
+        w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
+            initializer=tf.truncated_normal_initializer(stddev=stddev))
         conv = tf.nn.conv2d(inputconv,filter=w,strides=[1,s_w,s_h,1],padding=padding)
         biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
         conv = tf.nn.bias_add(conv,biases)
         if do_norm:
             dims = conv.get_shape()
-            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],tf.constant_initializer(1))
-            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],tf.constant_initializer(0))
+            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
+            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv,0)
+            conv = tf.nn.relu(conv,"relu")
+
+    return conv
+
+def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="deconv2d", do_norm=True, do_relu=True):
+    with tf.variable_scope(name):
+        w = tf.get_variable('w',[f_h, f_w, o_d, inputconv.get_shape()[-1]], 
+            initializer=tf.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.conv2d_transpose(inputconv,filter=w,output_shape=outshape,strides=[1,s_w,s_h,1],padding=padding)
+        biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
+        conv = tf.nn.bias_add(conv,biases)
+        if do_norm:
+            dims = conv.get_shape()
+            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
+            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
+            conv_mean,conv_var = tf.nn.moments(conv,[0])
+            conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
+        if do_relu:
+            conv = tf.nn.relu(conv,"relu")
 
     return conv
 
@@ -82,17 +100,18 @@ def build_resnet_block(inputres, dim, name="resnet"):
         out_res = general_conv2d(inputres, dim, 3, 3, 1, 1, 0.02, "SAME","c1")
         out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "SAME","c2",do_relu=False)
 
-    return tf.nn.relu(out_res + inputres)
-
+        out_res = tf.nn.relu(out_res + inputres)
+    return out_res
 
 
 def build_generator_resnet_6blocks(inputgen, name="generator"):
     with tf.variable_scope(name):
         f = 7
         ks = 3
+        
         o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,"SAME","c1")
-        o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,None,"c2")
-        o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,None,"c3")
+        o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c2")
+        o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,"SAME","c3")
 
         o_r1 = build_resnet_block(o_c3, ngf*4, "r1")
         o_r2 = build_resnet_block(o_r1, ngf*4, "r2")
@@ -101,36 +120,16 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
         o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
 
-        o_c4 = general_conv2d(o_r6, ngf*2, ks, ks, 2, 2, 0.02,None,"c4")
-        o_c5 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,None,"c5")
-        o_c6 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,None,"c5",do_relu="False")
+        o_c4 = general_deconv2d(o_r6, [batch_size,14,14,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
+        o_c5 = general_deconv2d(o_c4, [batch_size,28,28,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
+        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
 
         out_gen = tf.nn.tanh(o_c6,"t1")
 
+
     return out_gen
-
-        
-
-
-
-
-def show_result(batch_res, fname, grid_size=(8, 8), grid_pad=5):
-    batch_res = 0.5 * batch_res.reshape((batch_res.shape[0], img_height, img_width)) + 0.5
-    img_h, img_w = batch_res.shape[1], batch_res.shape[2]
-    grid_h = img_h * grid_size[0] + grid_pad * (grid_size[0] - 1)
-    grid_w = img_w * grid_size[1] + grid_pad * (grid_size[1] - 1)
-    img_grid = np.zeros((grid_h, grid_w), dtype=np.uint8)
-    for i, res in enumerate(batch_res):
-        if i >= grid_size[0] * grid_size[1]:
-            break
-        img = (res) * 255
-        img = img.astype(np.uint8)
-        row = (i // grid_size[0]) * (img_h + grid_pad)
-        col = (i % grid_size[1]) * (img_w + grid_pad)
-        img_grid[row:row + img_h, col:col + img_w] = img
-    imsave(fname, img_grid)
 
 
 def train():
