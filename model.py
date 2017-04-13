@@ -100,7 +100,7 @@ def build_resnet_block(inputres, dim, name="resnet"):
         out_res = general_conv2d(inputres, dim, 3, 3, 1, 1, 0.02, "SAME","c1")
         out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "SAME","c2",do_relu=False)
 
-        out_res = tf.nn.relu(out_res + inputres)
+        out_res = tf.nn.relu(out_res + inputres,"relu")
     return out_res
 
 
@@ -130,6 +130,22 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
 
 
     return out_gen
+
+
+def build_gen_discriminator(inputdisc, name="discriminator"):
+
+    with tf.variable_scope(name):
+        f = 4
+
+        o_c1 = general_conv2d(inputdisc, ndf, f, f, 2, 2, 0.02, "SAME", "c1")
+        o_c2 = general_conv2d(o_c1, ndf*2, f, f, 2, 2, 0.02, "SAME", "c2")
+        o_c3 = general_conv2d(o_c2, ndf*4, f, f, 2, 2, 0.02, "SAME", "c3")
+        o_c4 = general_conv2d(o_c3, ndf*8, f, f, 1, 1, 0.02, "SAME", "c4")
+        o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5")
+
+        out_disc = tf.nn.sigmoid(o_c5."sigmoid")
+
+    return out_disc
 
 
 def train():
