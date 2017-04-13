@@ -58,6 +58,12 @@ def build_discriminator(x_data, x_generated, keep_prob):
     d_params = [w1, b1, w2, b2, w3, b3]
     return y_data, y_generated, d_params
 
+
+
+def lrelu(x, leak=0.2, name="lrelu"):
+  return tf.maximum(x, leak*x)
+
+
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
     with tf.variable_scope(name):
         w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
@@ -72,11 +78,11 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv,"relu")
+            conv = tf.nn.relu(conv, relufactor, "relu")
 
     return conv
 
-def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="deconv2d", do_norm=True, do_relu=True):
+def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         w = tf.get_variable('w',[f_h, f_w, o_d, inputconv.get_shape()[-1]], 
             initializer=tf.truncated_normal_initializer(stddev=stddev))
@@ -90,7 +96,10 @@ def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, st
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv,"relu")
+            if(relufactor == 0):
+                conv = tf.nn.relu(conv,"relu")
+            else:
+                conv = lrelu(conv,"lrelu")
 
     return conv
 
@@ -132,16 +141,17 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
     return out_gen
 
 
+
 def build_gen_discriminator(inputdisc, name="discriminator"):
 
     with tf.variable_scope(name):
         f = 4
 
-        o_c1 = general_conv2d(inputdisc, ndf, f, f, 2, 2, 0.02, "SAME", "c1")
-        o_c2 = general_conv2d(o_c1, ndf*2, f, f, 2, 2, 0.02, "SAME", "c2")
-        o_c3 = general_conv2d(o_c2, ndf*4, f, f, 2, 2, 0.02, "SAME", "c3")
-        o_c4 = general_conv2d(o_c3, ndf*8, f, f, 1, 1, 0.02, "SAME", "c4")
-        o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5")
+        o_c1 = general_conv2d(inputdisc, ndf, f, f, 2, 2, 0.02, "SAME", "c1", relufactor=0.2)
+        o_c2 = general_conv2d(o_c1, ndf*2, f, f, 2, 2, 0.02, "SAME", "c2", relufactor=0.2)
+        o_c3 = general_conv2d(o_c2, ndf*4, f, f, 2, 2, 0.02, "SAME", "c3", relufactor=0.2)
+        o_c4 = general_conv2d(o_c3, ndf*8, f, f, 1, 1, 0.02, "SAME", "c4",relufactor=0.2)
+        o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5",do_norm=False,do_relu=False)
 
         out_disc = tf.nn.sigmoid(o_c5."sigmoid")
 
