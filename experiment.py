@@ -78,6 +78,24 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
 
     return conv
 
+def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="deconv2d", do_norm=True, do_relu=True):
+    with tf.variable_scope(name):
+        w = tf.get_variable('w',[f_h, f_w, o_d, inputconv.get_shape()[-1]], 
+            initializer=tf.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.conv2d_transpose(inputconv,filter=w,output_shape=outshape,strides=[1,s_w,s_h,1],padding=padding)
+        biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
+        conv = tf.nn.bias_add(conv,biases)
+        if do_norm:
+            dims = conv.get_shape()
+            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
+            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
+            conv_mean,conv_var = tf.nn.moments(conv,[0])
+            conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
+        if do_relu:
+            conv = tf.nn.relu(conv,"relu")
+
+    return conv
+
 def build_resnet_block(inputres, dim, name="resnet"):
     out_res = inputres
     with tf.variable_scope(name):
@@ -92,6 +110,7 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
     with tf.variable_scope(name):
         f = 7
         ks = 3
+        outsize = inputgen.get_shape()
         o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,"SAME","c1")
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,"SAME","c3")
@@ -103,9 +122,9 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
         o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
 
-        o_c4 = general_conv2d(o_r6, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
-        o_c5 = general_conv2d(o_c4, ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
-        o_c6 = general_conv2d(o_c5, ngf, ks, ks, 2, 2, 0.02,"SAME","c6",do_relu="False")
+        o_c4 = general_deconv2d(o_r6, [outsize[0],14,14,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
+        o_c5 = general_deconv2d(o_c4, [outsize[0],28,28,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
+        o_c6 = general_conv2d(o_c5, ngf, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
 
