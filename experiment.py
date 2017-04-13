@@ -110,7 +110,7 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
     with tf.variable_scope(name):
         f = 7
         ks = 3
-        outsize = inputgen.get_shape()
+        
         o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,"SAME","c1")
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,"SAME","c3")
@@ -122,9 +122,9 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
         o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
 
-        o_c4 = general_deconv2d(o_r6, [outsize[0],14,14,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
-        o_c5 = general_deconv2d(o_c4, [outsize[0],28,28,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
-        o_c6 = general_conv2d(o_c5, ngf, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
+        o_c4 = general_deconv2d(o_r6, [batch_size,14,14,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
+        o_c5 = general_deconv2d(o_c4, [batch_size,28,28,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
+        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
 
