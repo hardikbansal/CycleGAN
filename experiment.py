@@ -165,7 +165,7 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames = tf.train.match_filenames_once("./A/*.jpg")
+    filenames = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")
     queue_length = tf.size(filenames)
     filename_queue = tf.train.string_input_producer(filenames)
     image_reader = tf.WholeFileReader()
