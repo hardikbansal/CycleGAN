@@ -60,8 +60,15 @@ def build_discriminator(x_data, x_generated, keep_prob):
 
 
 
-def lrelu(x, leak=0.2, name="lrelu"):
-  return tf.maximum(x, leak*x)
+def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=True):
+    with tf.variable_scope(name):
+        if alt_relu_impl:
+            f1 = 0.5 * (1 + leak)
+            f2 = 0.5 * (1 - leak)
+            # lrelu = 1/2 * (1 + leak) * x + 1/2 * (1 - leak) * |x|
+            return f1 * x + f2 * abs(x)
+        else:
+            return tf.maximum(x, leak*x)
 
 
 def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
