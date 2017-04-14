@@ -7,6 +7,7 @@ from skimage.io import imsave
 import os
 import shutil
 
+from layers import *
 
 img_height = 28
 img_width = 28
@@ -29,80 +30,7 @@ sample_size = 10
 ngf = 128
 
 
-# def build_generator(z_prior):
-#     w1 = tf.Variable(tf.truncated_normal([z_size, h1_size], stddev=0.1), name="g_w1", dtype=tf.float32)
-#     b1 = tf.Variable(tf.zeros([h1_size]), name="g_b1", dtype=tf.float32)
-#     h1 = tf.nn.relu(tf.matmul(z_prior, w1) + b1)
-#     w2 = tf.Variable(tf.truncated_normal([h1_size, h2_size], stddev=0.1), name="g_w2", dtype=tf.float32)
-#     b2 = tf.Variable(tf.zeros([h2_size]), name="g_b2", dtype=tf.float32)
-#     h2 = tf.nn.relu(tf.matmul(h1, w2) + b2)
-#     w3 = tf.Variable(tf.truncated_normal([h2_size, img_size], stddev=0.1), name="g_w3", dtype=tf.float32)
-#     b3 = tf.Variable(tf.zeros([img_size]), name="g_b3", dtype=tf.float32)
-#     h3 = tf.matmul(h2, w3) + b3
-#     x_generate = tf.nn.tanh(h3)
-#     g_params = [w1, b1, w2, b2, w3, b3]
-#     return x_generate, g_params
 
-
-# def build_discriminator(x_data, x_generated, keep_prob):
-#     x_in = tf.concat(0, [x_data, x_generated])
-#     w1 = tf.Variable(tf.truncated_normal([img_size, h2_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-#     b1 = tf.Variable(tf.zeros([h2_size]), name="d_b1", dtype=tf.float32)
-#     h1 = tf.nn.dropout(tf.nn.relu(tf.matmul(x_in, w1) + b1), keep_prob)
-#     w2 = tf.Variable(tf.truncated_normal([h2_size, h1_size], stddev=0.1), name="d_w2", dtype=tf.float32)
-#     b2 = tf.Variable(tf.zeros([h1_size]), name="d_b2", dtype=tf.float32)
-#     h2 = tf.nn.dropout(tf.nn.relu(tf.matmul(h1, w2) + b2), keep_prob)
-#     w3 = tf.Variable(tf.truncated_normal([h1_size, 1], stddev=0.1), name="d_w3", dtype=tf.float32)
-#     b3 = tf.Variable(tf.zeros([1]), name="d_b3", dtype=tf.float32)
-#     h3 = tf.matmul(h2, w3) + b3
-#     y_data = tf.nn.sigmoid(tf.slice(h3, [0, 0], [batch_size, -1], name=None))
-#     y_generated = tf.nn.sigmoid(tf.slice(h3, [batch_size, 0], [-1, -1], name=None))
-#     d_params = [w1, b1, w2, b2, w3, b3]
-#     return y_data, y_generated, d_params
-
-
-def lrelu(x, leak=0.2, name="lrelu"):
-  return tf.maximum(x, leak*x)
-
-
-def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
-    with tf.variable_scope(name):
-        w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
-            initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.conv2d(inputconv,filter=w,strides=[1,s_w,s_h,1],padding=padding)
-        biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
-        conv = tf.nn.bias_add(conv,biases)
-        if do_norm:
-            dims = conv.get_shape()
-            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
-            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
-            conv_mean,conv_var = tf.nn.moments(conv,[0])
-            conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
-        if do_relu:
-            conv = tf.nn.relu(conv, relufactor, "relu")
-
-    return conv
-
-def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="deconv2d", do_norm=True, do_relu=True, relufactor=0):
-    with tf.variable_scope(name):
-        w = tf.get_variable('w',[f_h, f_w, o_d, inputconv.get_shape()[-1]], 
-            initializer=tf.truncated_normal_initializer(stddev=stddev))
-        conv = tf.nn.conv2d_transpose(inputconv,filter=w,output_shape=outshape,strides=[1,s_w,s_h,1],padding=padding)
-        biases = tf.get_variable('b',[o_d],initializer=tf.constant_initializer(0.0))
-        conv = tf.nn.bias_add(conv,biases)
-        if do_norm:
-            dims = conv.get_shape()
-            scale = tf.get_variable('scale',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(1))
-            beta = tf.get_variable('beta',[dims[1],dims[2],dims[3]],initializer=tf.constant_initializer(0))
-            conv_mean,conv_var = tf.nn.moments(conv,[0])
-            conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
-        if do_relu:
-            if(relufactor == 0):
-                conv = tf.nn.relu(conv,"relu")
-            else:
-                conv = lrelu(conv,"lrelu")
-
-    return conv
 
 def build_resnet_block(inputres, dim, name="resnet"):
     out_res = inputres
