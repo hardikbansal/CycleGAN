@@ -93,46 +93,64 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")
-    queue_length = tf.size(filenames)
-    filename_queue = tf.train.string_input_producer(filenames)
+    filenames_A = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")    
+    queue_length_A = tf.size(filenames_A)
+    filenames_B = tf.train.match_filenames_once("../datasets/horse2zebra/trainB/*.jpg")    
+    queue_length_B = tf.size(filenames_B)
+    
+    filename_queue_A = tf.train.string_input_producer(filenames_A)
+    filename_queue_B = tf.train.string_input_producer(filenames_B)
+    
     image_reader = tf.WholeFileReader()
-
-    _, image_file = image_reader.read(filename_queue)
-
-    image = tf.image.decode_jpeg(image_file)
-
-    # mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-    # x_data = tf.placeholder(tf.float32, shape=(batch_size, img_height, img_width, img_layer), name="x_data")
-    # x_generated = build_generator_resnet_6blocks(x_data,"g_1")
-    # g_loss = tf.reduce_sum(x_generated)
-    # g_trainer = tf.train.AdamOptimizer(0.001).minimize(g_loss,var_list=tf.trainable_variables())
+    _, image_file_A = image_reader.read(filename_queue_A)
+    _, image_file_B = image_reader.read(filename_queue_B)
+    image_A = tf.image.decode_jpeg(image_file_A)
+    image_B = tf.image.decode_jpeg(image_file_B)
 
     init = tf.global_variables_initializer()
+
+
+    #Build the network
+
+    input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
+    input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
     with tf.Session() as sess:
         sess.run(init)
 
 
+        # Loading images into the tensors
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
-        num_files = sess.run(queue_length)
+        num_files_A = sess.run(queue_length_A)
+        num_files_B = sess.run(queue_length_B)
 
-        images = []
+        images_A = []
+        images_B = []
 
-        for i in range(num_files):
-            image_tensor = sess.run(image)
-            images.append(image_tensor)
+        for i in range(num_files_A):
+            image_tensor = sess.run(image_A)
+            images_A.append(image_tensor)
 
-        image_batch = tf.stack(images)
+        for i in range(num_files_B):
+            image_tensor = sess.run(image_B)
+            # print(i)
+            # print(sess.run(tf.shape(image_tensor)))
+            # if(sess.run(tf.shape(image_tensor)[2]) == img_layer):
+            images_B.append(image_tensor)
 
-        num_images = image_batch.shape
+        Train_A = tf.stack(images_A)
+        Train_B = tf.stack(images_B)
+
+        num_images = Train_B.shape
 
         print(num_images)
 
         coord.request_stop()
         coord.join(threads)
+
+        # Traingin Loop
 
 
     #writer = tf.summary.FileWriter("output/1")
