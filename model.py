@@ -153,7 +153,7 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
         o_c4 = general_conv2d(o_c3, ndf*8, f, f, 1, 1, 0.02, "SAME", "c4",relufactor=0.2)
         o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5",do_norm=False,do_relu=False)
 
-        out_disc = tf.nn.sigmoid(o_c5."sigmoid")
+        out_disc = tf.nn.sigmoid(o_c5,"sigmoid")
 
     return out_disc
 
