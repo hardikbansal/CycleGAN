@@ -66,6 +66,7 @@ def build_resnet_block(inputres, dim, name="resnet"):
         out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "SAME","c2",do_relu=False)
 
         out_res = tf.nn.relu(out_res + inputres,"relu")
+    
     return out_res
 
 
