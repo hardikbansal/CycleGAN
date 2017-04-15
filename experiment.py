@@ -6,6 +6,8 @@ import numpy as np
 from skimage.io import imsave
 import os
 import shutil
+from PIL import Image
+
 
 from layers import *
 
@@ -115,6 +117,9 @@ def train():
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
     input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
+    fake_A = build_generator_resnet_6blocks(input_A, name="d_A")
+    fake_B = build_generator_resnet_6blocks(input_B, name="d_B")
+
     with tf.Session() as sess:
         sess.run(init)
 
@@ -129,16 +134,15 @@ def train():
         images_A = []
         images_B = []
 
-        for i in range(num_files_A):
+        for i in range(10):
             image_tensor = sess.run(image_A)
             images_A.append(image_tensor)
 
-        for i in range(num_files_B):
+        for i in range(10):
             image_tensor = sess.run(image_B)
-            # print(i)
-            # print(sess.run(tf.shape(image_tensor)))
-            # if(sess.run(tf.shape(image_tensor)[2]) == img_layer):
             images_B.append(image_tensor)
+
+        # Image.fromarray(np.asarray(image_tensor)).save("testimg.jpg")
 
         Train_A = tf.stack(images_A)
         Train_B = tf.stack(images_B)
@@ -151,6 +155,8 @@ def train():
         coord.join(threads)
 
         # Traingin Loop
+
+
 
 
     #writer = tf.summary.FileWriter("output/1")

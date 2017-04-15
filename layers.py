@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=True):
     with tf.variable_scope(name):
         if alt_relu_impl:
@@ -23,7 +25,7 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv, relufactor, "relu")
+            conv = tf.nn.relu(conv, "relu")
 
     return conv
 
