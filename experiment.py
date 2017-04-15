@@ -119,8 +119,8 @@ def train():
 
     # fake_A = build_generator_resnet_6blocks(input_A, name="d_A")
     # fake_B = build_generator_resnet_6blocks(input_B, name="d_B")
-    # rec_A = build_generator_resnet_6blocks(input_A, "d_A")
-    rec_A = build_gen_discriminator(input_A, "d_A")
+    rec_A = build_generator_resnet_6blocks(input_A, "d_A")
+    # rec_A = build_gen_discriminator(input_A, "d_A")
 
 
     d_loss = tf.reduce_sum(rec_A)
