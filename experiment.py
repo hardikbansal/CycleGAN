@@ -49,7 +49,8 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         f = 7
         ks = 3
         
-        o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,"SAME","c1")
+        pad_input = tf.pad(inputgen,[[0, 0], [ks, ks], [ks, ks]], "REFLECT")
+        o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,name="c1")
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,"SAME","c3")
 
@@ -115,12 +116,14 @@ def train():
     #Build the network
 
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
-    # input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
+    input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
-    # fake_A = build_generator_resnet_6blocks(input_A, name="d_A")
-    # fake_B = build_generator_resnet_6blocks(input_B, name="d_B")
-    # rec_A = build_generator_resnet_6blocks(input_A, "d_A")
+    fake_A = build_generator_resnet_6blocks(input_A, name="g_A")
+    fake_B = build_generator_resnet_6blocks(input_B, name="g_B")
     rec_A = build_gen_discriminator(input_A, "d_A")
+    rec_A = build_gen_discriminator(input_B, "d_B")
+    fake_rec_A = build_gen_discriminator(fake_A, "d_A")
+    fake_rec_B = build_gen_discriminator(fake_B, "d_B")
 
 
     d_loss = tf.reduce_sum(rec_A)
@@ -157,12 +160,12 @@ def train():
 
         # Image.fromarray(np.asarray(image_tensor)).save("testimg.jpg")
 
-        Train_A = tf.stack(images_A)
-        Train_B = tf.stack(images_B)
+        # Train_A = tf.stack(images_A)
+        # Train_B = tf.stack(images_B)
 
-        num_images = Train_B.shape
+        # num_images = Train_B.shape
 
-        print(num_images)
+        # print(num_images)
 
         coord.request_stop()
         coord.join(threads)
