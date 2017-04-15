@@ -146,7 +146,7 @@ def train():
         images_A = []
         images_B = []
 
-        for i in range(10):
+        for i in range(10): 
             image_tensor = sess.run(image_A)
             images_A.append(image_tensor)
 
