@@ -49,8 +49,8 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         f = 7
         ks = 3
         
-        pad_input = tf.pad(inputgen,[[0, 0], [ks, ks], [ks, ks]], "REFLECT")
-        o_c1 = general_conv2d(inputgen, ngf, f, f, 1, 1, 0.02,name="c1")
+        pad_input = tf.pad(inputgen,[[0, 0], [ks, ks], [ks, ks], [0, 0]], "REFLECT")
+        o_c1 = general_conv2d(pad_input, ngf, f, f, 1, 1, 0.02,name="c1")
         o_c2 = general_conv2d(o_c1, ngf*2, ks, ks, 2, 2, 0.02,"SAME","c2")
         o_c3 = general_conv2d(o_c2, ngf*4, ks, ks, 2, 2, 0.02,"SAME","c3")
 
@@ -96,9 +96,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("../datasets/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -118,15 +118,23 @@ def train():
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
     input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
-    fake_A = build_generator_resnet_6blocks(input_A, name="g_A")
-    fake_B = build_generator_resnet_6blocks(input_B, name="g_B")
-    rec_A = build_gen_discriminator(input_A, "d_A")
-    rec_A = build_gen_discriminator(input_B, "d_B")
-    fake_rec_A = build_gen_discriminator(fake_A, "d_A")
-    fake_rec_B = build_gen_discriminator(fake_B, "d_B")
+    with tf.variable_scope("Model") as scope:
+        fake_B = build_generator_resnet_6blocks(input_A, name="g_A")
+        fake_A = build_generator_resnet_6blocks(input_B, name="g_B")
+        rec_A = build_gen_discriminator(input_A, "d_A")
+        rec_B = build_gen_discriminator(input_B, "d_B")
+
+        scope.reuse_variables()
+
+        fake_rec_A = build_gen_discriminator(fake_A, "d_A")
+        fake_rec_B = build_gen_discriminator(fake_B, "d_B")
+        cyc_A = build_generator_resnet_6blocks(fake_B, "g_B")
+        cyc_B = build_generator_resnet_6blocks(fake_A, "g_A")
 
 
-    d_loss = tf.reduce_sum(rec_A)
+        # Loss functions for various things
+
+    d_loss = tf.reduce_mean(tf.squared_difference(input_A,cyc_A))
 
     optimizer = tf.train.AdamOptimizer(0.0001)
 
@@ -172,14 +180,14 @@ def train():
 
         # Traingin Loop
 
-        writer = tf.summary.FileWriter("output/2")
+        writer = tf.summary.FileWriter("/output/2")
 
         for i in range(0,1):
             for j in range(0,3):
                 print("next iter")
                 A_input = images_A[1]
                 A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer])
-                sess.run(d_trainer,feed_dict={input_A:A_input.eval(session=sess)})
+                sess.run(d_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:A_input.eval(session=sess)})
 
         writer.add_graph(sess.graph)
 
