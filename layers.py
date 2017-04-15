@@ -11,7 +11,7 @@ def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=True):
             return tf.maximum(x, leak*x)
 
 
-def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True):
+def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, padding=None, name="conv2d", do_norm=True, do_relu=True, relufactor=0):
     with tf.variable_scope(name):
         w = tf.get_variable('w',[f_h, f_w, inputconv.get_shape()[-1], o_d], 
             initializer=tf.truncated_normal_initializer(stddev=stddev))
@@ -25,7 +25,10 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
             conv_mean,conv_var = tf.nn.moments(conv,[0])
             conv = tf.nn.batch_normalization(conv,conv_mean,conv_var,beta,scale,0.001)
         if do_relu:
-            conv = tf.nn.relu(conv, "relu")
+            if(relufactor == 0):
+                conv = tf.nn.relu(conv,"relu")
+            else:
+                conv = lrelu(conv, relufactor, "lrelu")
 
     return conv
 
@@ -46,6 +49,6 @@ def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, st
             if(relufactor == 0):
                 conv = tf.nn.relu(conv,"relu")
             else:
-                conv = lrelu(conv,"lrelu")
+                conv = lrelu(conv, relufactor, "lrelu")
 
     return conv

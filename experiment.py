@@ -11,9 +11,9 @@ from PIL import Image
 
 from layers import *
 
-img_height = 28
-img_width = 28
-img_layer = 1
+img_height = 256
+img_width = 256
+img_layer = 3
 img_size = img_height * img_width
 
 to_train = True
@@ -30,7 +30,7 @@ z_size = 100
 batch_size = 1
 sample_size = 10
 ngf = 128
-
+ndf = 64
 
 
 
@@ -60,8 +60,8 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
         o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
 
-        o_c4 = general_deconv2d(o_r6, [batch_size,14,14,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
-        o_c5 = general_deconv2d(o_c4, [batch_size,28,28,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
+        o_c4 = general_deconv2d(o_r6, [batch_size,128,128,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
+        o_c5 = general_deconv2d(o_c4, [batch_size,256,256,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
         o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
@@ -109,16 +109,28 @@ def train():
     image_A = tf.image.decode_jpeg(image_file_A)
     image_B = tf.image.decode_jpeg(image_file_B)
 
-    init = tf.global_variables_initializer()
+    
 
 
     #Build the network
 
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
-    input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
+    # input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
 
-    fake_A = build_generator_resnet_6blocks(input_A, name="d_A")
-    fake_B = build_generator_resnet_6blocks(input_B, name="d_B")
+    # fake_A = build_generator_resnet_6blocks(input_A, name="d_A")
+    # fake_B = build_generator_resnet_6blocks(input_B, name="d_B")
+    rec_A = build_generator_resnet_6blocks(input_A, "d_A")
+
+
+    d_loss = tf.reduce_sum(rec_A)
+
+    optimizer = tf.train.AdamOptimizer(0.0001)
+
+    d_trainer = optimizer.minimize(d_loss, var_list=tf.trainable_variables())
+
+    init = tf.global_variables_initializer()
+
+    
 
     with tf.Session() as sess:
         sess.run(init)
@@ -155,6 +167,18 @@ def train():
         coord.join(threads)
 
         # Traingin Loop
+
+        writer = tf.summary.FileWriter("output/1")
+
+        for i in range(0,1):
+            for j in range(0,3):
+                print("next iter")
+                A_input = images_A[1]
+                A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer])
+                sess.run(d_trainer,feed_dict={input_A:A_input.eval(session=sess)})
+
+        writer.add_graph(sess.graph)
+
 
 
 
