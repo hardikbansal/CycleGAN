@@ -89,6 +89,12 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
 
     return out_disc
 
+def error_fake_pool(fake_pool_rec, num_fakes):
+
+    if(num_fakes >= pool_size):
+        return tf.reduce_mean(tf.squared_difference(fake_pool_rec,1))
+    else:
+        return tf.reduce_mean(tf.squared_difference(fake_pool_rec[pool_size - num_fakes - 1:],1))
 
 
 def train():
@@ -117,7 +123,12 @@ def train():
 
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
     input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
-    lr = tf.placeholder(tf.float32, shape=[])
+    
+    fake_pool_A = tf.placeholder(tf.float32, [pool_size, img_width, img_height, img_layer], name="fake_pool_A")
+    fake_pool_B = tf.placeholder(tf.float32, [pool_size, img_width, img_height, img_layer], name="fake_pool_B")
+    num_fake_inputs = tf.placeholder(tf.float32, [], name="num_fake_inputs")
+
+    lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
     with tf.variable_scope("Model") as scope:
         fake_B = build_generator_resnet_6blocks(input_A, name="g_A")
@@ -132,12 +143,26 @@ def train():
         cyc_A = build_generator_resnet_6blocks(fake_B, "g_B")
         cyc_B = build_generator_resnet_6blocks(fake_A, "g_A")
 
+        scope.reuse_variables()
+
+        fake_pool_rec_A = build_gen_discriminator(fake_pool_A, "d_A")
+        fake_pool_rec_B = build_gen_discriminator(fake_pool_B, "d_B")
+
 
         # Loss functions for various things
 
     cyc_loss = tf.reduce_mean(tf.squared_difference(input_A, cyc_A)) + tf.reduce_mean(tf.squared_difference(input_B, cyc_B))
-    discriminator_loss = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_rec_A,1)) + tf.reduce_mean(tf.squared_difference(fake_rec_B,1))
-    d_loss = cyc_loss + discriminator_loss
+    
+
+    disc_loss_A = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.squared_difference(fake_rec_A,1))
+    disc_loss_B = tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_rec_B,1))
+    
+    g_loss_A = cyc_loss + disc_loss_A
+    g_loss_B = cyc_loss + disc_loss_B
+
+    d_loss_A = tf.reduce_mean(tf.square(rec_A)) + error_fake_pool(fake_pool_rec_A, num_fake_inputs)
+    d_loss_B = tf.reduce_mean(tf.square(rec_B)) + error_fake_pool(fake_pool_rec_B, num_fake_inputs)
+
     
     optimizer = tf.train.AdamOptimizer(lr)
 
@@ -148,10 +173,10 @@ def train():
     d_B_vars = [var for var in model_vars if 'd_B' in var.name]
     g_B_vars = [var for var in model_vars if 'g_B' in var.name]
     
-    d_A_trainer = optimizer.minimize(-d_loss, var_list=d_A_vars)
-    d_B_trainer = optimizer.minimize(-d_loss, var_list=d_B_vars)
-    g_A_trainer = optimizer.minimize(d_loss, var_list=g_A_vars)
-    g_B_trainer = optimizer.minimize(d_loss, var_list=g_B_vars)
+    d_A_trainer = optimizer.minimize(-d_loss_A, var_list=d_A_vars)
+    d_B_trainer = optimizer.minimize(-d_loss_B, var_list=d_B_vars)
+    g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
+    g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars)
     
 
 
@@ -204,7 +229,7 @@ def train():
                 B_input = images_B[j]
                 A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
                 B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
-                sess.run(g_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                sess.run([g_A_trainer,fake_A],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
                 sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
                 sess.run(g_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
                 sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
