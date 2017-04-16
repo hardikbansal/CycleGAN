@@ -96,9 +96,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("../datasets/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -185,7 +185,7 @@ def train():
 
         # Traingin Loop
 
-        writer = tf.summary.FileWriter("output/2")
+        writer = tf.summary.FileWriter("/output/2")
 
         for i in range(0,max_epoch):
             print ("In the epoch ", i)
@@ -193,12 +193,12 @@ def train():
                 print("In iteration ", j)
                 A_input = images_A[j]
                 B_input = images_B[j]
-                A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer])
-                B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer])
-                sess.run(g_A_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
-                sess.run(d_A_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
-                sess.run(g_B_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
-                sess.run(d_B_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
+                A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
+                B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
+                sess.run(g_A_trainer,feed_dict={input_A:A_input, input_B:B_input})
+                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input})
+                sess.run(g_B_trainer,feed_dict={input_A:A_input, input_B:B_input})
+                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input})
 
         writer.add_graph(sess.graph)
 
