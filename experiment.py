@@ -96,9 +96,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("../datasets/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("../datasets/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -185,7 +185,7 @@ def train():
 
         # Traingin Loop
 
-        writer = tf.summary.FileWriter("/output/2")
+        writer = tf.summary.FileWriter("output/2")
 
         for i in range(0,max_epoch):
             print ("In the epoch ", i)
