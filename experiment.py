@@ -117,6 +117,7 @@ def train():
 
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
     input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
+    lr = tf.placeholder(tf.float32, shape=[])
 
     with tf.variable_scope("Model") as scope:
         fake_B = build_generator_resnet_6blocks(input_A, name="g_A")
@@ -138,7 +139,7 @@ def train():
     discriminator_loss = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_rec_A,1)) + tf.reduce_mean(tf.squared_difference(fake_rec_B,1))
     d_loss = cyc_loss + discriminator_loss
     
-    optimizer = tf.train.AdamOptimizer(0.0001)
+    optimizer = tf.train.AdamOptimizer(lr)
 
     model_vars = tf.trainable_variables()
 
@@ -155,6 +156,8 @@ def train():
 
 
     init = tf.global_variables_initializer()
+
+    saver = tf.train.Saver()
 
     
 
@@ -189,16 +192,25 @@ def train():
 
         for i in range(0,max_epoch):
             print ("In the epoch ", i)
+
+            if(i < 100) :
+                curr_lr = 0.0002
+            else:
+                curr_lr = 0.0002 - 0.0002*(i-100)/100
+
             for j in range(0,3):
                 print("In iteration ", j)
                 A_input = images_A[j]
                 B_input = images_B[j]
                 A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
                 B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
-                sess.run(g_A_trainer,feed_dict={input_A:A_input, input_B:B_input})
-                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input})
-                sess.run(g_B_trainer,feed_dict={input_A:A_input, input_B:B_input})
-                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input})
+                sess.run(g_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                sess.run(g_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+
+            # if(i % 10 == 0):
+            #     saver.save(sess,"/output/cyleganmodel")
 
         writer.add_graph(sess.graph)
 
