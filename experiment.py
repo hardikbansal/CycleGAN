@@ -134,11 +134,25 @@ def train():
 
         # Loss functions for various things
 
-    d_loss = tf.reduce_mean(tf.squared_difference(input_A,cyc_A))
-
+    cyc_loss = tf.reduce_mean(tf.squared_difference(input_A, cyc_A)) + tf.reduce_mean(tf.squared_difference(input_B, cyc_B))
+    discriminator_loss = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_rec_A,1)) + tf.reduce_mean(tf.squared_difference(fake_rec_B,1))
+    d_loss = cyc_loss + discriminator_loss
+    
     optimizer = tf.train.AdamOptimizer(0.0001)
 
-    d_trainer = optimizer.minimize(d_loss, var_list=tf.trainable_variables())
+    model_vars = tf.trainable_variables()
+
+    d_A_vars = [var for var in model_vars if 'd_A' in var.name]
+    g_A_vars = [var for var in model_vars if 'g_A' in var.name]
+    d_B_vars = [var for var in model_vars if 'd_B' in var.name]
+    g_B_vars = [var for var in model_vars if 'g_B' in var.name]
+    
+    d_A_trainer = optimizer.minimize(-d_loss, var_list=d_A_vars)
+    d_B_trainer = optimizer.minimize(-d_loss, var_list=d_B_vars)
+    g_A_trainer = optimizer.minimize(d_loss, var_list=g_A_vars)
+    g_B_trainer = optimizer.minimize(d_loss, var_list=g_B_vars)
+    
+
 
     init = tf.global_variables_initializer()
 
@@ -166,15 +180,6 @@ def train():
             image_tensor = sess.run(image_B)
             images_B.append(image_tensor)
 
-        # Image.fromarray(np.asarray(image_tensor)).save("testimg.jpg")
-
-        # Train_A = tf.stack(images_A)
-        # Train_B = tf.stack(images_B)
-
-        # num_images = Train_B.shape
-
-        # print(num_images)
-
         coord.request_stop()
         coord.join(threads)
 
@@ -182,12 +187,18 @@ def train():
 
         writer = tf.summary.FileWriter("/output/2")
 
-        for i in range(0,1):
+        for i in range(0,max_epoch):
+            print ("In the epoch ", i)
             for j in range(0,3):
-                print("next iter")
-                A_input = images_A[1]
+                print("In iteration ", j)
+                A_input = images_A[j]
+                B_input = images_B[j]
                 A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer])
-                sess.run(d_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:A_input.eval(session=sess)})
+                B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer])
+                sess.run(g_A_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
+                sess.run(d_A_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
+                sess.run(g_B_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
+                sess.run(d_B_trainer,feed_dict={input_A:A_input.eval(session=sess), input_B:B_input.eval(session=sess)})
 
         writer.add_graph(sess.graph)
 
