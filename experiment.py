@@ -21,6 +21,9 @@ to_restore = False
 output_path = "output"
 
 
+temp_check = 0
+
+
 
 max_epoch = 1
 
@@ -30,7 +33,7 @@ z_size = 100
 batch_size = 1
 pool_size = 5
 sample_size = 10
-ngf = 128
+ngf = 64
 ndf = 64
 
 
@@ -90,20 +93,19 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
 
     return out_disc
 
-def error_fake_pool(fake_pool_rec, num_fakes):
 
-    if(num_fakes >= pool_size):
-        return tf.reduce_mean(tf.squared_difference(fake_pool_rec,1))
-    else:
-        return tf.reduce_mean(tf.squared_difference(fake_pool_rec[pool_size - num_fakes - 1:],1))
-
-def add_fake_sample(fake_pool, fake_image,num_fakes):
+def add_fake_sample(fake_pool, fake_image, num_fakes):
     if(num_fakes < pool_size):
-        fake_pool[num_fakes,] = fake_image
+        if(num_fakes == 0):
+            fake_pool[0] = fake_image[0]
+        else:
+            # print("Over Here")
+            fake_pool = np.append(fake_pool, np.array([fake_image]), axis=0)
     else:
         if(np.random.rand(1)[0] > 0.5):
             randidx = np.random.randint(0,pool_size,1)[0]
             fake_pool[randidx,] = fake_image
+    # print(fake_pool.shape)
 
 def train():
 
@@ -132,11 +134,10 @@ def train():
     input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
     input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
     
-    fake_pool_A = tf.placeholder(tf.float32, [pool_size, img_width, img_height, img_layer], name="fake_pool_A")
-    fake_pool_B = tf.placeholder(tf.float32, [pool_size, img_width, img_height, img_layer], name="fake_pool_B")
+    fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
+    fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
 
-    num_fake_inputs_A = 0
-    num_fake_inputs_B = 0
+    num_fake_inputs = 0
 
     lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
@@ -167,11 +168,11 @@ def train():
     disc_loss_A = tf.reduce_mean(tf.squared_difference(fake_rec_A,1))
     disc_loss_B = tf.reduce_mean(tf.squared_difference(fake_rec_B,1))
     
-    g_loss_A = cyc_loss + disc_loss_B
-    g_loss_B = cyc_loss + disc_loss_A
+    g_loss_A = cyc_loss*10 + disc_loss_B
+    g_loss_B = cyc_loss*10 + disc_loss_A
 
-    d_loss_A = tf.reduce_mean(tf.square(rec_A)) + error_fake_pool(fake_pool_rec_A, num_fake_inputs_A)
-    d_loss_B = tf.reduce_mean(tf.square(rec_B)) + error_fake_pool(fake_pool_rec_B, num_fake_inputs_B)
+    d_loss_A = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.squared_difference(fake_pool_rec_A,1))
+    d_loss_B = tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_pool_rec_B,1))
 
     
     optimizer = tf.train.AdamOptimizer(lr)
@@ -187,6 +188,16 @@ def train():
     d_B_trainer = optimizer.minimize(-d_loss_B, var_list=d_B_vars)
     g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
     g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars)
+
+
+    # Summary Variables
+
+    # tf.scalar_summary("g_A_loss", g_loss_A)
+    # tf.scalar_summary("g_B_loss", g_loss_B)
+    # tf.scalar_summary("d_A_loss", d_loss_A)
+    # tf.scalar_summary("d_B_loss", d_loss_B)
+
+    # summary_op = tf.merge_all_summaries()
     
 
 
@@ -210,8 +221,8 @@ def train():
         images_A = []
         images_B = []
 
-        fake_images_A = np.empty([pool_size,img_height, img_width, img_layer])
-        fake_images_B = np.empty([pool_size,img_height, img_width, img_layer])
+        fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
+        fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
         num_fakes_A = 0
         num_files_B = 0
 
@@ -244,12 +255,20 @@ def train():
                 B_input = images_B[j]
                 A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
                 B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
-                _, fake_A_temp = sess.run([g_A_trainer,fake_A],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
-                add_fake_sample(fake_images_A, fake_A_temp[0], num_fake_inputs_A)
-                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_A:fake_images_A})
-                # num_fake_inputs_A+=1
-                # sess.run(g_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+
+                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_B:fake_images_B[:num_fake_inputs+1]})
+                _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+
+                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_A:fake_images_A[:num_fake_inputs+1]})
+                # print(num_fake_inputs_A)
+                # print("Shape of images array",fake_images_A.shape)
                 # sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+
+                if(num_fake_inputs < pool_size):
+                    fake_images_A[num_fake_inputs] = fake_A_temp[0]
+                    fake_images_B[num_fake_inputs] = fake_B_temp[0]
+                    num_fake_inputs+=1
 
             # if(i % 10 == 0):
             #     saver.save(sess,"/output/cyleganmodel")
