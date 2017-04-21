@@ -7,7 +7,7 @@ from skimage.io import imsave
 import os
 import shutil
 from PIL import Image
-
+import time
 
 from layers import *
 
@@ -26,6 +26,7 @@ temp_check = 0
 
 
 max_epoch = 1
+max_images = 10
 
 h1_size = 150
 h2_size = 300
@@ -192,12 +193,12 @@ def train():
 
     # Summary Variables
 
-    # tf.scalar_summary("g_A_loss", g_loss_A)
-    # tf.scalar_summary("g_B_loss", g_loss_B)
-    # tf.scalar_summary("d_A_loss", d_loss_A)
-    # tf.scalar_summary("d_B_loss", d_loss_B)
+    tf.scalar_summary("g_A_loss", g_loss_A)
+    tf.scalar_summary("g_B_loss", g_loss_B)
+    tf.scalar_summary("d_A_loss", d_loss_A)
+    tf.scalar_summary("d_B_loss", d_loss_B)
 
-    # summary_op = tf.merge_all_summaries()
+    summary_op = tf.merge_all_summaries()
     
 
 
@@ -241,34 +242,43 @@ def train():
 
         writer = tf.summary.FileWriter("/output/2")
 
-        for i in range(0,max_epoch):
-            print ("In the epoch ", i)
+        for epoch in range(0,1):
+            print ("In the epoch ", epoch)
 
-            if(i < 100) :
+            if(epoch < 100) :
                 curr_lr = 0.0002
             else:
-                curr_lr = 0.0002 - 0.0002*(i-100)/100
+                curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
-            for j in range(0,3):
-                print("In iteration ", j)
-                A_input = images_A[j]
-                B_input = images_B[j]
-                A_input = tf.reshape(A_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
-                B_input = tf.reshape(B_input,[batch_size,img_height, img_width, img_layer]).eval(session=sess)
+            A_input = tf.reshape(images_A[0],[batch_size,img_height, img_width, img_layer]).eval(session=sess)
+            B_input = tf.reshape(images_B[0],[batch_size,img_height, img_width, img_layer]).eval(session=sess)
+
+            for ptr in range(0,max_images):
+
+                print("In the iteration ",ptr)
+
+                print(time.time()*1000.0)
+
+                # print(time.time()*1000.0)
+                
                 _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
-
-                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_B:fake_images_B[:num_fake_inputs+1]})
+                sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                
                 _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
 
-                sess.run(d_A_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr, fake_pool_A:fake_images_A[:num_fake_inputs+1]})
-                # print(num_fake_inputs_A)
-                # print("Shape of images array",fake_images_A.shape)
-                # sess.run(d_B_trainer,feed_dict={input_A:A_input, input_B:B_input, lr:curr_lr})
+                
+
+                # summary_str = sess.run(summary_op,feed_dict={input_A:A_input, input_B:B_input, fake_pool_A:fake_images_A[0:num_fake_inputs+1], fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                # writer.add_summary(summary_str, epoch*max_images + ptr)
 
                 if(num_fake_inputs < pool_size):
                     fake_images_A[num_fake_inputs] = fake_A_temp[0]
                     fake_images_B[num_fake_inputs] = fake_B_temp[0]
                     num_fake_inputs+=1
+
+                
+
 
             # if(i % 10 == 0):
             #     saver.save(sess,"/output/cyleganmodel")
