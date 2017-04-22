@@ -21,6 +21,7 @@ img_size = img_height * img_width
 to_train = True
 to_restore = False
 output_path = "output"
+check_dir = "./output/checkpoints/"
 
 
 temp_check = 0
@@ -133,9 +134,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("./inputs/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("./inputs/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -231,6 +232,10 @@ def train():
     with tf.Session() as sess:
         sess.run(init)
 
+        if to_restore:
+            chkpt_fname = tf.train.latest_checkpoint(check_dir)
+            saver.restore(sess, chkpt_fname)
+
 
         # Loading images into the tensors
         coord = tf.train.Coordinator()
@@ -262,13 +267,15 @@ def train():
 
         # Traingin Loop
 
-        writer = tf.summary.FileWriter("/output/2")
+        writer = tf.summary.FileWriter("./output/2")
 
         # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
         # print(a,b,c,d,e)
 
         for epoch in range(0,10):
             print ("In the epoch ", epoch)
+
+            saver.save(sess,os.path.join(check_dir,"cyclegan"),globalstep=epoch)
 
             if(epoch < 100) :
                 curr_lr = 0.0002
@@ -379,13 +386,13 @@ def train():
 
 #     sess.run(init)
 
-#     if to_restore:
-#         chkpt_fname = tf.train.latest_checkpoint(output_path)
-#         saver.restore(sess, chkpt_fname)
-#     else:
-#         if os.path.exists(output_path):
-#             shutil.rmtree(output_path)
-#         os.mkdir(output_path)
+    # if to_restore:
+    #     chkpt_fname = tf.train.latest_checkpoint(output_path)
+    #     saver.restore(sess, chkpt_fname)
+    # else:
+    #     if os.path.exists(output_path):
+    #         shutil.rmtree(output_path)
+    #     os.mkdir(output_path)
 
 
 #     z_sample_val = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
