@@ -29,13 +29,13 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 10
+max_images = 1000
 
 h1_size = 150
 h2_size = 300
 z_size = 100
 batch_size = 1
-pool_size = 5
+pool_size = 50
 sample_size = 10
 ngf = 64
 ndf = 64
@@ -234,6 +234,7 @@ def train():
     with tf.Session() as sess:
         sess.run(init)
 
+
         if to_restore:
             chkpt_fname = tf.train.latest_checkpoint(check_dir)
             saver.restore(sess, chkpt_fname)
@@ -271,6 +272,9 @@ def train():
 
         writer = tf.summary.FileWriter("./output/2")
 
+        if not os.path.exists(check_dir):
+            os.makedirs(check_dir)
+
         # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
         # print(a,b,c,d,e)
 
@@ -279,13 +283,19 @@ def train():
 
             saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
 
+
             if(epoch < 100) :
                 curr_lr = 0.0002
             else:
                 curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
-            summary_str = sess.run(summary_op,feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
+            summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
+            im = Image.fromarray(cyc_A_temp)
+            im.save("./output/epoch"+str(epoch)+".jpg")
+            
             writer.add_summary(summary_str, epoch)
+
+
 
 
             for ptr in range(0,max_images):
