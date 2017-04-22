@@ -159,6 +159,8 @@ def train():
     fake_pool_A = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_A")
     fake_pool_B = tf.placeholder(tf.float32, [None, img_width, img_height, img_layer], name="fake_pool_B")
 
+    global_step = tf.Variable(0, name="global_step", trainable=False)
+
     num_fake_inputs = 0
 
     lr = tf.placeholder(tf.float32, shape=[], name="lr")
@@ -272,10 +274,10 @@ def train():
         # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
         # print(a,b,c,d,e)
 
-        for epoch in range(0,10):
+        for epoch in range(sess.run(global_step),10):
             print ("In the epoch ", epoch)
 
-            saver.save(sess,os.path.join(check_dir,"cyclegan"),globalstep=epoch)
+            saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
 
             if(epoch < 100) :
                 curr_lr = 0.0002
@@ -324,6 +326,8 @@ def train():
                         fake_images_A[random_id] = fake_A_temp[0]
                         random_id = random.randint(0,pool_size-1)
                         fake_images_B[random_id] = fake_B_temp[0]
+
+            sess.run(tf.assign(global_step, epoch + 1))
 
                 
 
