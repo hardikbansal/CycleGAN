@@ -3,7 +3,7 @@
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
-from skimage.io import imsave
+from scipy.misc import imsave
 import os
 import shutil
 from PIL import Image
@@ -21,7 +21,7 @@ img_size = img_height * img_width
 to_train = True
 to_restore = False
 output_path = "output"
-check_dir = "./output/checkpoints/"
+check_dir = "/output/checkpoints/"
 
 
 temp_check = 0
@@ -29,7 +29,7 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 10
+max_images = 1000
 
 h1_size = 150
 h2_size = 300
@@ -134,9 +134,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -145,8 +145,8 @@ def train():
     image_reader = tf.WholeFileReader()
     _, image_file_A = image_reader.read(filename_queue_A)
     _, image_file_B = image_reader.read(filename_queue_B)
-    image_A = tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[143,143]), 128, 128)
-    image_B = tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[143,143]), 128, 128)
+    image_A = tf.subtract(tf.div(tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[143,143]), 128, 128),127.5),1)
+    image_B = tf.subtract(tf.div(tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[143,143]), 128, 128),127.5),1)
 
     
 
@@ -270,7 +270,7 @@ def train():
 
         # Traingin Loop
 
-        writer = tf.summary.FileWriter("./output/2")
+        writer = tf.summary.FileWriter("/output/2")
 
         if not os.path.exists(check_dir):
             os.makedirs(check_dir)
@@ -278,7 +278,7 @@ def train():
         # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
         # print(a,b,c,d,e)
 
-        for epoch in range(sess.run(global_step),1):
+        for epoch in range(sess.run(global_step),10):
             print ("In the epoch ", epoch)
 
             saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
@@ -290,8 +290,10 @@ def train():
                 curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
             summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-            # im = Image.fromarray(cyc_A_temp[0])
-            # im.save("/output/epoch"+str(epoch)+".jpg")
+            imsave("/output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+            imsave("/output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+
+
             
             writer.add_summary(summary_str, epoch)
 
@@ -306,11 +308,11 @@ def train():
 
                 if(num_fake_inputs < pool_size):
                 
-                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[0], input_B:B_input[0], lr:curr_lr})
-                    sess.run(d_B_trainer,feed_dict={input_A:A_input[0], input_B:B_input[0], lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                    sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
                     
-                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[0], input_B:B_input[0], lr:curr_lr})
-                    sess.run(d_A_trainer,feed_dict={input_A:A_input[0], input_B:B_input[0], lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
+                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                    sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
             
                     # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
                 else :
@@ -347,20 +349,6 @@ def train():
 
         writer.add_graph(sess.graph)
 
-
-
-
-
-    #writer = tf.summary.FileWriter("output/1")
-
-    # for i in range(0,1):
-    #     for j in range(0,10):
-    #         print("next_epoch")
-    #         x_value, _ = mnist.train.next_batch(batch_size)
-    #         x_value = tf.reshape(x_value,[batch_size,img_height, img_width, img_layer])
-    #         sess.run(g_trainer,feed_dict={x_data:x_value.eval(session=sess)})
-
-    #writer.add_graph(sess.graph)
 
 
 
