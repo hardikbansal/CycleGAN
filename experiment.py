@@ -13,8 +13,8 @@ import random
 
 from layers import *
 
-img_height = 256
-img_width = 256
+img_height = 128
+img_width = 128
 img_layer = 3
 img_size = img_height * img_width
 
@@ -29,7 +29,7 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 1000
+max_images = 10
 
 h1_size = 150
 h2_size = 300
@@ -69,8 +69,8 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
         o_r5 = build_resnet_block(o_r4, ngf*4, "r5")
         o_r6 = build_resnet_block(o_r5, ngf*4, "r6")
 
-        o_c4 = general_deconv2d(o_r6, [batch_size,128,128,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
-        o_c5 = general_deconv2d(o_c4, [batch_size,256,256,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
+        o_c4 = general_deconv2d(o_r6, [batch_size,64,64,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
+        o_c5 = general_deconv2d(o_c4, [batch_size,128,128,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
         o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
 
         # Adding the tanh layer
@@ -134,9 +134,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("./inputs/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("./inputs/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -145,8 +145,8 @@ def train():
     image_reader = tf.WholeFileReader()
     _, image_file_A = image_reader.read(filename_queue_A)
     _, image_file_B = image_reader.read(filename_queue_B)
-    image_A = tf.image.decode_jpeg(image_file_A)
-    image_B = tf.image.decode_jpeg(image_file_B)
+    image_A = tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[143,143]), 128, 128)
+    image_B = tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[143,143]), 128, 128)
 
     
 
@@ -166,8 +166,8 @@ def train():
     lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
     with tf.variable_scope("Model") as scope:
-        fake_B = build_generator_resnet_9blocks(input_A, name="g_A")
-        fake_A = build_generator_resnet_9blocks(input_B, name="g_B")
+        fake_B = build_generator_resnet_6blocks(input_A, name="g_A")
+        fake_A = build_generator_resnet_6blocks(input_B, name="g_B")
         rec_A = build_gen_discriminator(input_A, "d_A")
         rec_B = build_gen_discriminator(input_B, "d_B")
 
@@ -175,8 +175,8 @@ def train():
 
         fake_rec_A = build_gen_discriminator(fake_A, "d_A")
         fake_rec_B = build_gen_discriminator(fake_B, "d_B")
-        cyc_A = build_generator_resnet_9blocks(fake_B, "g_B")
-        cyc_B = build_generator_resnet_9blocks(fake_A, "g_A")
+        cyc_A = build_generator_resnet_6blocks(fake_B, "g_B")
+        cyc_B = build_generator_resnet_6blocks(fake_A, "g_A")
 
         scope.reuse_variables()
 
@@ -278,7 +278,7 @@ def train():
         # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
         # print(a,b,c,d,e)
 
-        for epoch in range(sess.run(global_step),10):
+        for epoch in range(sess.run(global_step),1):
             print ("In the epoch ", epoch)
 
             saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
@@ -290,8 +290,8 @@ def train():
                 curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
             summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-            im = Image.fromarray(cyc_A_temp)
-            im.save("./output/epoch"+str(epoch)+".jpg")
+            # im = Image.fromarray(cyc_A_temp[0])
+            # im.save("/output/epoch"+str(epoch)+".jpg")
             
             writer.add_summary(summary_str, epoch)
 
