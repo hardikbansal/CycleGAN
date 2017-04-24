@@ -19,6 +19,7 @@ img_layer = 3
 img_size = img_height * img_width
 
 to_train = True
+to_test = True
 to_restore = False
 output_path = "output"
 check_dir = "/output/checkpoints/"
@@ -134,9 +135,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -240,114 +241,157 @@ def train():
             saver.restore(sess, chkpt_fname)
 
 
-        # Loading images into the tensors
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-
-        num_files_A = sess.run(queue_length_A)
-        num_files_B = sess.run(queue_length_B)
-
-        images_A = []
-        images_B = []
-
-        fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
-        fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
-
-        A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
-        B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
-
-        for i in range(max_images): 
-            image_tensor = sess.run(image_A)
-            A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
-
-        for i in range(max_images):
-            image_tensor = sess.run(image_B)
-            B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
+        if to_test:
+            print "Testing the results"
 
 
-        coord.request_stop()
-        coord.join(threads)
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(coord=coord)
 
-        # Traingin Loop
+            num_files_A = sess.run(queue_length_A)
+            num_files_B = sess.run(queue_length_B)
 
-        writer = tf.summary.FileWriter("/output/2")
+            images_A = []
+            images_B = []
 
-        if not os.path.exists(check_dir):
-            os.makedirs(check_dir)
+            fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
+            fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
 
-        # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-        # print(a,b,c,d,e)
+            A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
+            B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
 
-        for epoch in range(sess.run(global_step),10):
-            print ("In the epoch ", epoch)
+            for i in range(max_images): 
+                image_tensor = sess.run(image_A)
+                A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
-            saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
-
-
-            if(epoch < 100) :
-                curr_lr = 0.0002
-            else:
-                curr_lr = 0.0002 - 0.0002*(epoch-100)/100
-
-            summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-            imsave("/output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-            imsave("/output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+            for i in range(max_images):
+                image_tensor = sess.run(image_B)
+                B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
 
-            
-            writer.add_summary(summary_str, epoch)
+            coord.request_stop()
+            coord.join(threads)
+
+            for ptr in range(0,100):
+                fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[0], input_B:B_input[0]})
+                imsave("./output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
 
 
+        else :
+
+            # Loading images into the tensors
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(coord=coord)
+
+            num_files_A = sess.run(queue_length_A)
+            num_files_B = sess.run(queue_length_B)
+
+            images_A = []
+            images_B = []
+
+            fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
+            fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
+
+            A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
+            B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
+
+            for i in range(max_images): 
+                image_tensor = sess.run(image_A)
+                A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
+
+            for i in range(max_images):
+                image_tensor = sess.run(image_B)
+                B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
 
-            for ptr in range(0,max_images):
+            coord.request_stop()
+            coord.join(threads)
 
-                print("In the iteration ",ptr)
+            # Traingin Loop
 
-                print(time.time()*1000.0)
+            writer = tf.summary.FileWriter("./output/2")
 
-                if(num_fake_inputs < pool_size):
+            if not os.path.exists(check_dir):
+                os.makedirs(check_dir)
+
+            # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
+            # print(a,b,c,d,e)
+
+            for epoch in range(sess.run(global_step),10):
+                print ("In the epoch ", epoch)
+
+                saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
+
+
+                if(epoch < 100) :
+                    curr_lr = 0.0002
+                else:
+                    curr_lr = 0.0002 - 0.0002*(epoch-100)/100
+
+                summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
+                imsave("./output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+
+
                 
-                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                    sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                writer.add_summary(summary_str, epoch)
+
+
+
+
+                for ptr in range(0,max_images):
+
+                    print("In the iteration ",ptr)
+
+                    print(time.time()*1000.0)
+
+                    if(num_fake_inputs < pool_size):
                     
-                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                    sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
-            
-                    # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-                else :
-                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                    sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B})
+                        _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                        sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                        
+                        _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                        sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
+                
+                        # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
+                    else :
+                        _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                        sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B})
+                        
+                        _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                        sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A})
+
+                        # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
                     
-                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                    sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A})
 
-                    # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-                
+                    # writer.add_summary(summary_str, epoch*max_images + ptr)
 
-                # writer.add_summary(summary_str, epoch*max_images + ptr)
+                    if(num_fake_inputs < pool_size):
+                        fake_images_A[num_fake_inputs] = fake_A_temp[0]
+                        fake_images_B[num_fake_inputs] = fake_B_temp[0]
+                        num_fake_inputs+=1
+                    else :
+                        p = random.random()
+                        if p > 0.5:
+                            random_id = random.randint(0,pool_size-1)
+                            fake_images_A[random_id] = fake_A_temp[0]
+                            random_id = random.randint(0,pool_size-1)
+                            fake_images_B[random_id] = fake_B_temp[0]
 
-                if(num_fake_inputs < pool_size):
-                    fake_images_A[num_fake_inputs] = fake_A_temp[0]
-                    fake_images_B[num_fake_inputs] = fake_B_temp[0]
-                    num_fake_inputs+=1
-                else :
-                    p = random.random()
-                    if p > 0.5:
-                        random_id = random.randint(0,pool_size-1)
-                        fake_images_A[random_id] = fake_A_temp[0]
-                        random_id = random.randint(0,pool_size-1)
-                        fake_images_B[random_id] = fake_B_temp[0]
+                sess.run(tf.assign(global_step, epoch + 1))
 
-            sess.run(tf.assign(global_step, epoch + 1))
-
-                
+                    
 
 
-            # if(i % 10 == 0):
-            #     saver.save(sess,"/output/cyleganmodel")
+                # if(i % 10 == 0):
+                #     saver.save(sess,"/output/cyleganmodel")
 
-        writer.add_graph(sess.graph)
+            writer.add_graph(sess.graph)
 
 
 
