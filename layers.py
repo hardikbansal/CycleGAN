@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=True):
+def lrelu(x, leak=0.2, name="lrelu", alt_relu_impl=False):
     with tf.variable_scope(name):
         if alt_relu_impl:
             f1 = 0.5 * (1 + leak)
