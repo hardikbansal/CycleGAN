@@ -13,8 +13,8 @@ import random
 
 from layers import *
 
-img_height = 128
-img_width = 128
+img_height = 256
+img_width = 256
 img_layer = 3
 img_size = img_height * img_width
 
@@ -22,7 +22,7 @@ to_train = True
 to_test = False
 to_restore = False
 output_path = "output"
-check_dir = "/output/checkpoints/"
+check_dir = "./output/checkpoints/"
 
 
 temp_check = 0
@@ -30,7 +30,7 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 1000
+max_images = 3
 
 h1_size = 150
 h2_size = 300
@@ -40,6 +40,8 @@ pool_size = 50
 sample_size = 10
 ngf = 64
 ndf = 64
+
+
 
 
 
@@ -127,6 +129,23 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
     return o_c5
 
 
+def fake_image_pool(num_fakes, fake, fake_pool):
+
+    if(num_fakes < pool_size):
+        fake_pool[num_fakes] = fake
+        return fake
+    else :
+        p = random.random()
+        if p > 0.5:
+            random_id = random.randint(0,pool_size-1)
+            temp = fake_pool[random_id]
+            fake_pool[random_id] = fake
+            return temp
+        else :
+            return fake
+
+
+
 
 def train():
 
@@ -144,8 +163,8 @@ def train():
     image_reader = tf.WholeFileReader()
     _, image_file_A = image_reader.read(filename_queue_A)
     _, image_file_B = image_reader.read(filename_queue_B)
-    image_A = tf.subtract(tf.div(tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[143,143]), 128, 128),127.5),1)
-    image_B = tf.subtract(tf.div(tf.image.resize_image_with_crop_or_pad(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[143,143]), 128, 128),127.5),1)
+    image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
+    image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
 
     
 
@@ -165,8 +184,8 @@ def train():
     lr = tf.placeholder(tf.float32, shape=[], name="lr")
 
     with tf.variable_scope("Model") as scope:
-        fake_B = build_generator_resnet_6blocks(input_A, name="g_A")
-        fake_A = build_generator_resnet_6blocks(input_B, name="g_B")
+        fake_B = build_generator_resnet_9blocks(input_A, name="g_A")
+        fake_A = build_generator_resnet_9blocks(input_B, name="g_B")
         rec_A = build_gen_discriminator(input_A, "d_A")
         rec_B = build_gen_discriminator(input_B, "d_B")
 
@@ -174,8 +193,8 @@ def train():
 
         fake_rec_A = build_gen_discriminator(fake_A, "d_A")
         fake_rec_B = build_gen_discriminator(fake_B, "d_B")
-        cyc_A = build_generator_resnet_6blocks(fake_B, "g_B")
-        cyc_B = build_generator_resnet_6blocks(fake_A, "g_A")
+        cyc_A = build_generator_resnet_9blocks(fake_B, "g_B")
+        cyc_B = build_generator_resnet_9blocks(fake_A, "g_A")
 
         scope.reuse_variables()
 
@@ -212,6 +231,8 @@ def train():
     g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
     g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars)
 
+    for var in model_vars: print(var.name)
+
 
     # Summary Variables
 
@@ -238,9 +259,8 @@ def train():
             chkpt_fname = tf.train.latest_checkpoint(check_dir)
             saver.restore(sess, chkpt_fname)
 
-
         if to_test:
-            print "Testing the results"
+            print("Testing the results")
 
 
             coord = tf.train.Coordinator()
@@ -251,9 +271,6 @@ def train():
 
             images_A = []
             images_B = []
-
-            fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
-            fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
 
             A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
             B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
@@ -292,11 +309,13 @@ def train():
             images_A = []
             images_B = []
 
-            fake_images_A = np.zeros((pool_size,img_height, img_width, img_layer))
-            fake_images_B = np.zeros((pool_size,img_height, img_width, img_layer))
+            fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layer))
+            fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layer))
+            fake_images_temp = np.zeros((1,img_height, img_width, img_layer))
 
-            A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
-            B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
+
+            A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
+            B_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
 
             for i in range(max_images): 
                 image_tensor = sess.run(image_A)
@@ -317,8 +336,6 @@ def train():
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
 
-            # a,b,c,d,e = sess.run([cyc_loss,disc_loss_A,disc_loss_B,g_loss_A,g_loss_B],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-            # print(a,b,c,d,e)
 
             for epoch in range(sess.run(global_step),10):
                 print ("In the epoch ", epoch)
@@ -331,13 +348,13 @@ def train():
                 else:
                     curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
-                summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-                imsave("./output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+                # summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0]})
+                # imsave("/output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                # imsave("/output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
 
 
                 
-                writer.add_summary(summary_str, epoch)
+                # writer.add_summary(summary_str, epoch)
 
 
 
@@ -346,119 +363,33 @@ def train():
 
                     print("In the iteration ",ptr)
 
-                    print(time.time()*1000.0)
+                    print("Starting",time.time()*1000.0)
 
-                    if(num_fake_inputs < pool_size):
+                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+
+                    print("After gA", time.time()*1000.0)
+                    fake_B_temp1 = fake_image_pool(num_fake_inputs, fake_B_temp, fake_images_B)
+                    sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_B_temp1})
+
+                    print("After dB", time.time()*1000.0)
                     
-                        _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                        sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B[0:num_fake_inputs+1]})
+                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+
+                    print("After gB", time.time()*1000.0)
+                    fake_A_temp1 = fake_image_pool(num_fake_inputs, fake_A_temp, fake_images_A)
+                    sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_A_temp1})
+
+                    print("After dA", time.time()*1000.0)
+            
                         
-                        _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                        sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A[0:num_fake_inputs+1]})
-                
-                        # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-                    else :
-                        _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                        sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_images_B})
-                        
-                        _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
-                        sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_images_A})
-
-                        # summary_str = sess.run(summary_op,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], fake_pool_A:fake_images_A, fake_pool_B:fake_images_B})
-                    
-
-                    # writer.add_summary(summary_str, epoch*max_images + ptr)
-
-                    if(num_fake_inputs < pool_size):
-                        fake_images_A[num_fake_inputs] = fake_A_temp[0]
-                        fake_images_B[num_fake_inputs] = fake_B_temp[0]
-                        num_fake_inputs+=1
-                    else :
-                        p = random.random()
-                        if p > 0.5:
-                            random_id = random.randint(0,pool_size-1)
-                            fake_images_A[random_id] = fake_A_temp[0]
-                            random_id = random.randint(0,pool_size-1)
-                            fake_images_B[random_id] = fake_B_temp[0]
 
                 sess.run(tf.assign(global_step, epoch + 1))
-
-                    
-
-
-                # if(i % 10 == 0):
-                #     saver.save(sess,"/output/cyleganmodel")
 
             writer.add_graph(sess.graph)
 
 
 
 
-
-
-
-
-
-
-
-
-
-# def train():
-#     mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
-
-#     x_data = tf.placeholder(tf.float32, [batch_size, img_size], name="x_data")
-#     z_prior = tf.placeholder(tf.float32, [batch_size, z_size], name="z_prior")
-#     keep_prob = tf.placeholder(tf.float32, name="keep_prob")
-#     global_step = tf.Variable(0, name="global_step", trainable=False)
-
-#     x_generated, g_params = build_generator(z_prior)
-#     y_data, y_generated, d_params = build_discriminator(x_data, x_generated, keep_prob)
-
-#     d_loss = - (tf.log(y_data) + tf.log(1 - y_generated))
-#     g_loss = - tf.log(y_generated)
-
-#     optimizer = tf.train.AdamOptimizer(0.0001)
-
-#     d_trainer = optimizer.minimize(d_loss, var_list=d_params)
-#     g_trainer = optimizer.minimize(g_loss, var_list=g_params)
-
-#     init = tf.initialize_all_variables()
-
-#     saver = tf.train.Saver()
-
-#     sess = tf.Session()
-
-#     sess.run(init)
-
-    # if to_restore:
-    #     chkpt_fname = tf.train.latest_checkpoint(output_path)
-    #     saver.restore(sess, chkpt_fname)
-    # else:
-    #     if os.path.exists(output_path):
-    #         shutil.rmtree(output_path)
-    #     os.mkdir(output_path)
-
-
-#     z_sample_val = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
-
-#     for i in range(sess.run(global_step), max_epoch):
-#         for j in range(60000 / batch_size):
-#             print "epoch:%s, iter:%s" % (i, j)
-#             x_value, _ = mnist.train.next_batch(batch_size)
-#             x_value = 2 * x_value.astype(np.float32) - 1
-#             z_value = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
-#             sess.run(d_trainer,
-#                      feed_dict={x_data: x_value, z_prior: z_value, keep_prob: np.sum(0.7).astype(np.float32)})
-#             if j % 1 == 0:
-#                 sess.run(g_trainer,
-#                          feed_dict={x_data: x_value, z_prior: z_value, keep_prob: np.sum(0.7).astype(np.float32)})
-#         x_gen_val = sess.run(x_generated, feed_dict={z_prior: z_sample_val})
-#         show_result(x_gen_val, "output/sample{0}.jpg".format(i))
-#         z_random_sample_val = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
-#         x_gen_val = sess.run(x_generated, feed_dict={z_prior: z_random_sample_val})
-#         show_result(x_gen_val, "output/random_sample{0}.jpg".format(i))
-#         sess.run(tf.assign(global_step, i + 1))
-#         saver.save(sess, os.path.join(output_path, "model"), global_step=global_step)
 
 def show_result(batch_res, fname, grid_size=(8, 8), grid_pad=5):
     batch_res = 0.5 * batch_res.reshape((batch_res.shape[0], img_height, img_width)) + 0.5
