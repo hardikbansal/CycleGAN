@@ -24,7 +24,7 @@ to_train = True
 to_test = False
 to_restore = False
 output_path = "output"
-check_dir = "./output/checkpoints/"
+check_dir = "/output/checkpoints/"
 
 
 temp_check = 0
@@ -32,7 +32,7 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 3
+max_images = 10
 
 h1_size = 150
 h2_size = 300
@@ -68,9 +68,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -81,6 +81,8 @@ def train():
     _, image_file_B = image_reader.read(filename_queue_B)
     image_A = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_A),[256,256]),127.5),1)
     image_B = tf.subtract(tf.div(tf.image.resize_images(tf.image.decode_jpeg(image_file_B),[256,256]),127.5),1)
+
+    print(tf.__version__)
 
     
 
@@ -129,8 +131,8 @@ def train():
     g_loss_A = cyc_loss*10 + disc_loss_B
     g_loss_B = cyc_loss*10 + disc_loss_A
 
-    d_loss_A = tf.reduce_mean(tf.square(rec_A)) + tf.reduce_mean(tf.squared_difference(fake_pool_rec_A,1))
-    d_loss_B = tf.reduce_mean(tf.square(rec_B)) + tf.reduce_mean(tf.squared_difference(fake_pool_rec_B,1))
+    d_loss_A = (tf.reduce_mean(tf.square(fake_pool_rec_A)) + tf.reduce_mean(tf.squared_difference(rec_A,1)))/2.0
+    d_loss_B = (tf.reduce_mean(tf.square(fake_pool_rec_B)) + tf.reduce_mean(tf.squared_difference(rec_B,1)))/2.0
 
     
     optimizer = tf.train.AdamOptimizer(lr)
@@ -150,14 +152,16 @@ def train():
     for var in model_vars: print(var.name)
 
 
+
+
     # Summary Variables
 
-    tf.summary.scalar("g_A_loss", g_loss_A)
-    tf.summary.scalar("g_B_loss", g_loss_B)
-    tf.summary.scalar("d_A_loss", d_loss_A)
-    tf.summary.scalar("d_B_loss", d_loss_B)
+    g_A_loss_summ = tf.summary.scalar("g_A_loss", g_loss_A)
+    g_B_loss_summ = tf.summary.scalar("g_B_loss", g_loss_B)
+    d_A_loss_summ = tf.summary.scalar("d_A_loss", d_loss_A)
+    d_B_loss_summ = tf.summary.scalar("d_B_loss", d_loss_B)
 
-    summary_op = tf.summary.merge_all()
+    # summary_op = tf.summary.merge_all()
     
 
 
@@ -205,12 +209,12 @@ def train():
 
             for ptr in range(0,100):
                 fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[0], input_B:B_input[0]})
-                imsave("./output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
-                imsave("./output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
+                imsave("/output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("/output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("/output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("/output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("/output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+                imsave("/output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
 
 
         else :
@@ -227,7 +231,6 @@ def train():
 
             fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layer))
             fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layer))
-            fake_images_temp = np.zeros((1,img_height, img_width, img_layer))
 
 
             A_input = np.zeros((max_images, batch_size, img_height, img_width, img_layer))
@@ -247,13 +250,13 @@ def train():
 
             # Traingin Loop
 
-            writer = tf.summary.FileWriter("./output/2")
+            writer = tf.summary.FileWriter("/output/2")
 
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
 
 
-            for epoch in range(sess.run(global_step),10):
+            for epoch in range(sess.run(global_step),1):
                 print ("In the epoch ", epoch)
 
                 saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
@@ -281,21 +284,36 @@ def train():
 
                     print("Starting",time.time()*1000.0)
 
-                    _, fake_B_temp = sess.run([g_A_trainer,fake_B],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                    # Optimizing the G_A network
 
+                    _, fake_B_temp, summary_str = sess.run([g_A_trainer, fake_B, g_A_loss_summ],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+
+                    writer.add_summary(summary_str, epoch*max_images + ptr)
                     print("After gA", time.time()*1000.0)
+                    
                     fake_B_temp1 = fake_image_pool(num_fake_inputs, fake_B_temp, fake_images_B)
-                    sess.run(d_B_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_B_temp1})
+                    
+                    # Optimizing the D_B network
+                    _, summary_str = sess.run([d_B_trainer, d_B_loss_summ],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_B:fake_B_temp1})
 
+                    writer.add_summary(summary_str, epoch*max_images + ptr)
                     print("After dB", time.time()*1000.0)
                     
-                    _, fake_A_temp = sess.run([g_B_trainer, fake_A],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
+                    # Optimizing the G_B network
+                    _, fake_A_temp, summary_str = sess.run([g_B_trainer, fake_A, g_B_loss_summ],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr})
 
+                    writer.add_summary(summary_str, epoch*max_images + ptr)
                     print("After gB", time.time()*1000.0)
+                    
                     fake_A_temp1 = fake_image_pool(num_fake_inputs, fake_A_temp, fake_images_A)
-                    sess.run(d_A_trainer,feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_A_temp1})
 
+                    # Optimizing the D_A network
+                    _, summary_str = sess.run([d_A_trainer, d_A_loss_summ],feed_dict={input_A:A_input[ptr], input_B:B_input[ptr], lr:curr_lr, fake_pool_A:fake_A_temp1})
+
+                    writer.add_summary(summary_str, epoch*max_images + ptr)
                     print("After dA", time.time()*1000.0)
+
+                    num_fake_inputs+=1
             
                         
 
