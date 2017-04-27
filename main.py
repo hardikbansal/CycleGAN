@@ -24,7 +24,7 @@ to_train = True
 to_test = False
 to_restore = False
 output_path = "output"
-check_dir = "/output/checkpoints/"
+check_dir = "./output/checkpoints/"
 
 
 temp_check = 0
@@ -68,9 +68,9 @@ def train():
 
     # Load Dataset from the dataset folder
 
-    filenames_A = tf.train.match_filenames_once("/input/horse2zebra/trainA/*.jpg")    
+    filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
     queue_length_A = tf.size(filenames_A)
-    filenames_B = tf.train.match_filenames_once("/input/horse2zebra/trainB/*.jpg")    
+    filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
     queue_length_B = tf.size(filenames_B)
     
     filename_queue_A = tf.train.string_input_producer(filenames_A)
@@ -144,8 +144,8 @@ def train():
     d_B_vars = [var for var in model_vars if 'd_B' in var.name]
     g_B_vars = [var for var in model_vars if 'g_B' in var.name]
     
-    d_A_trainer = optimizer.minimize(-d_loss_A, var_list=d_A_vars)
-    d_B_trainer = optimizer.minimize(-d_loss_B, var_list=d_B_vars)
+    d_A_trainer = optimizer.minimize(d_loss_A, var_list=d_A_vars)
+    d_B_trainer = optimizer.minimize(d_loss_B, var_list=d_B_vars)
     g_A_trainer = optimizer.minimize(g_loss_A, var_list=g_A_vars)
     g_B_trainer = optimizer.minimize(g_loss_B, var_list=g_B_vars)
 
@@ -209,12 +209,12 @@ def train():
 
             for ptr in range(0,100):
                 fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[0], input_B:B_input[0]})
-                imsave("/output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("/output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("/output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("/output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("/output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
-                imsave("/output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
 
 
         else :
@@ -250,7 +250,7 @@ def train():
 
             # Traingin Loop
 
-            writer = tf.summary.FileWriter("/output/2")
+            writer = tf.summary.FileWriter("./output/2")
 
             if not os.path.exists(check_dir):
                 os.makedirs(check_dir)
