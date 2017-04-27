@@ -29,7 +29,8 @@ def general_conv2d(inputconv, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, stddev=0.02, p
         
         conv = tf.contrib.layers.conv2d(inputconv, o_d, f_w, s_w, padding, weights_initializer=tf.truncated_normal_initializer(stddev=stddev),biases_initializer=None)
         if do_norm:
-            conv = instance_norm(conv)
+            # conv = instance_norm(conv)
+            conv = tf.contrib.layers.batch_norm(conv, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True, scope="batch_norm")
             
         if do_relu:
             if(relufactor == 0):
@@ -47,7 +48,8 @@ def general_deconv2d(inputconv, outshape, o_d=64, f_h=7, f_w=7, s_h=1, s_w=1, st
         conv = tf.contrib.layers.conv2d_transpose(inputconv, o_d, [f_h, f_w], [s_h, s_w], padding, weights_initializer=tf.truncated_normal_initializer(stddev=stddev),biases_initializer=None)
         
         if do_norm:
-            conv = instance_norm(conv)
+            # conv = instance_norm(conv)
+            conv = tf.contrib.layers.batch_norm(conv, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True, scope="batch_norm")
             
         if do_relu:
             if(relufactor == 0):
