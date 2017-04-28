@@ -37,7 +37,7 @@ def build_resnet_block(inputres, dim, name="resnet"):
         out_res = tf.pad(out_res, [[0, 0], [1, 1], [1, 1], [0, 0]], "REFLECT")
         out_res = general_conv2d(out_res, dim, 3, 3, 1, 1, 0.02, "VALID","c2",do_relu=False)
         
-    return out_res + inputres
+        return out_res + inputres
 
 
 def build_generator_resnet_6blocks(inputgen, name="generator"):
@@ -59,14 +59,14 @@ def build_generator_resnet_6blocks(inputgen, name="generator"):
 
         o_c4 = general_deconv2d(o_r6, [batch_size,64,64,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
         o_c5 = general_deconv2d(o_c4, [batch_size,128,128,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
-        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
+        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu=False)
 
         # Adding the tanh layer
 
         out_gen = tf.nn.tanh(o_c6,"t1")
 
 
-    return out_gen
+        return out_gen
 
 def build_generator_resnet_9blocks(inputgen, name="generator"):
     with tf.variable_scope(name):
@@ -90,14 +90,14 @@ def build_generator_resnet_9blocks(inputgen, name="generator"):
 
         o_c4 = general_deconv2d(o_r9, [batch_size,128,128,ngf*2], ngf*2, ks, ks, 2, 2, 0.02,"SAME","c4")
         o_c5 = general_deconv2d(o_c4, [batch_size,256,256,ngf], ngf, ks, ks, 2, 2, 0.02,"SAME","c5")
-        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu="False")
+        o_c6 = general_conv2d(o_c5, img_layer, f, f, 1, 1, 0.02,"SAME","c6",do_relu=False)
 
         # Adding the tanh layer
 
         out_gen = tf.nn.tanh(o_c6,"t1")
 
 
-    return out_gen
+        return out_gen
 
 
 def build_gen_discriminator(inputdisc, name="discriminator"):
@@ -111,4 +111,4 @@ def build_gen_discriminator(inputdisc, name="discriminator"):
         o_c4 = general_conv2d(o_c3, ndf*8, f, f, 1, 1, 0.02, "SAME", "c4",relufactor=0.2)
         o_c5 = general_conv2d(o_c4, 1, f, f, 1, 1, 0.02, "SAME", "c5",do_norm=False,do_relu=False)
 
-    return o_c5
+        return o_c5
