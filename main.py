@@ -22,7 +22,7 @@ img_size = img_height * img_width
 
 to_train = True
 to_test = False
-to_restore = False
+to_restore = True
 output_path = "output"
 check_dir = "./output/checkpoints/"
 
@@ -32,7 +32,7 @@ temp_check = 0
 
 
 max_epoch = 1
-max_images = 10
+max_images = 1000
 
 h1_size = 150
 h2_size = 300
@@ -256,7 +256,7 @@ def train():
                 os.makedirs(check_dir)
 
 
-            for epoch in range(sess.run(global_step),1):
+            for epoch in range(sess.run(global_step),100):
                 print ("In the epoch ", epoch)
 
                 saver.save(sess,os.path.join(check_dir,"cyclegan"),global_step=epoch)
@@ -267,13 +267,16 @@ def train():
                 else:
                     curr_lr = 0.0002 - 0.0002*(epoch-100)/100
 
-                # summary_str, cyc_A_temp = sess.run([summary_op, cyc_A],feed_dict={input_A:A_input[0], input_B:B_input[0]})
-                # imsave("/output/output_"+str(epoch)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-                # imsave("/output/input.jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
 
+                for i in range(0,10):
+                    fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[i], input_B:B_input[i]})
+                    imsave("/output/imgs/fakeB_"+ str(epoch) + "_" + str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("/output/imgs/fakeA_"+ str(epoch) + "_" + str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("/output/imgs/cycA_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("/output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("/output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((A_input[i][0]+1)*127.5).astype(np.uint8))
+                    imsave("/output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((B_input[i][0]+1)*127.5).astype(np.uint8))
 
-                
-                # writer.add_summary(summary_str, epoch)
 
 
 
