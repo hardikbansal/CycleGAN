@@ -22,7 +22,7 @@ img_size = img_height * img_width
 
 to_train = True
 to_test = False
-to_restore = True
+to_restore = False
 output_path = "output"
 check_dir = "./output/checkpoints/"
 
