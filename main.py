@@ -270,12 +270,12 @@ def train():
 
                 for i in range(0,10):
                     fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[i], input_B:B_input[i]})
-                    imsave("/output/imgs/fakeB_"+ str(epoch) + "_" + str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-                    imsave("/output/imgs/fakeA_"+ str(epoch) + "_" + str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-                    imsave("/output/imgs/cycA_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-                    imsave("/output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
-                    imsave("/output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((A_input[i][0]+1)*127.5).astype(np.uint8))
-                    imsave("/output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((B_input[i][0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/fakeB_"+ str(epoch) + "_" + str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/fakeA_"+ str(epoch) + "_" + str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/cycA_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/cycB_"+ str(epoch) + "_" + str(i)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/inputA_"+ str(epoch) + "_" + str(i)+".jpg",((A_input[i][0]+1)*127.5).astype(np.uint8))
+                    imsave("./output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((B_input[i][0]+1)*127.5).astype(np.uint8))
 
 
 
