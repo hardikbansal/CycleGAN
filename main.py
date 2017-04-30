@@ -40,7 +40,7 @@ z_size = 100
 batch_size = 1
 pool_size = 50
 sample_size = 10
-ngf = 64
+ngf = 32
 ndf = 64
 
 
