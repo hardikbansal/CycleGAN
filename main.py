@@ -135,7 +135,7 @@ def train():
     d_loss_B = (tf.reduce_mean(tf.square(fake_pool_rec_B)) + tf.reduce_mean(tf.squared_difference(rec_B,1)))/2.0
 
     
-    optimizer = tf.train.AdamOptimizer(lr)
+    optimizer = tf.train.AdamOptimizer(lr, beta1=0.5)
 
     model_vars = tf.trainable_variables()
 
