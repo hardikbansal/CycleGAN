@@ -327,7 +327,4 @@ def train():
 
 
 if __name__ == '__main__':
-    if to_train:
-        train()
-    else:
-        test()
+    train()
