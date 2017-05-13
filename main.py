@@ -281,43 +281,31 @@ class CycleGAN():
 
             writer.add_graph(sess.graph)
 
-    # def test(self):
+    def test(self):
 
-    #     print("Testing the results")
+        print("Testing the results")
 
+        self.input_setup()
 
-    #     coord = tf.train.Coordinator()
-    #     threads = tf.train.start_queue_runners(coord=coord)
+        self.model_setup()
+        saver = tf.train.Saver()
 
-    #     num_files_A = sess.run(queue_length_A)
-    #     num_files_B = sess.run(queue_length_B)
+        with tf.Session() as sess:
 
-    #     images_A = []
-    #     images_B = []
+            self.input_read(sess)
 
-    #     A_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
-    #     B_input = np.zeros((max_images,batch_size,img_height, img_width, img_layer))
+            chkpt_fname = tf.train.latest_checkpoint(check_dir)
+            saver.restore(sess, chkpt_fname)
 
-    #     for i in range(max_images): 
-    #         image_tensor = sess.run(image_A)
-    #         A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
+            if not os.path.exists("./output/imgs/test/"):
+                os.makedirs("./output/imgs/test/")            
 
-    #     for i in range(max_images):
-    #         image_tensor = sess.run(image_B)
-    #         B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
-
-
-    #     coord.request_stop()
-    #     coord.join(threads)
-
-    #     for ptr in range(0,100):
-    #         fake_A_temp, fake_B_temp, cyc_A_temp, cyc_B_temp = sess.run([fake_A, fake_B, cyc_A, cyc_B],feed_dict={input_A:A_input[0], input_B:B_input[0]})
-    #         imsave("./output/fakeB_"+str(ptr)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
-    #         imsave("./output/fakeA_"+str(ptr)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-    #         imsave("./output/cycA_"+str(ptr)+".jpg",((cyc_A_temp[0]+1)*127.5).astype(np.uint8))
-    #         imsave("./output/cycB_"+str(ptr)+".jpg",((cyc_B_temp[0]+1)*127.5).astype(np.uint8))
-    #         imsave("./output/inputA_"+str(ptr)+".jpg",((A_input[0][0]+1)*127.5).astype(np.uint8))
-    #         imsave("./output/inputB_"+str(ptr)+".jpg",((B_input[0][0]+1)*127.5).astype(np.uint8))
+            for i in range(0,100):
+                fake_A_temp, fake_B_temp = sess.run([self.fake_A, self.fake_B],feed_dict={self.input_A:self.A_input[i], self.input_B:self.B_input[i]})
+                imsave("./output/imgs/test/fakeB_"+str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/fakeA_"+str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((A_input[i][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((B_input[i][0]+1)*127.5).astype(np.uint8))
 
 
 def main():
