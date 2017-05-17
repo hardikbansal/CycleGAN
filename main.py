@@ -289,8 +289,11 @@ class CycleGAN():
 
         self.model_setup()
         saver = tf.train.Saver()
+        init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
+
+            sess.run(init)
 
             self.input_read(sess)
 
@@ -304,8 +307,8 @@ class CycleGAN():
                 fake_A_temp, fake_B_temp = sess.run([self.fake_A, self.fake_B],feed_dict={self.input_A:self.A_input[i], self.input_B:self.B_input[i]})
                 imsave("./output/imgs/test/fakeB_"+str(i)+".jpg",((fake_A_temp[0]+1)*127.5).astype(np.uint8))
                 imsave("./output/imgs/test/fakeA_"+str(i)+".jpg",((fake_B_temp[0]+1)*127.5).astype(np.uint8))
-                imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((A_input[i][0]+1)*127.5).astype(np.uint8))
-                imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((B_input[i][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/inputA_"+str(i)+".jpg",((self.A_input[i][0]+1)*127.5).astype(np.uint8))
+                imsave("./output/imgs/test/inputB_"+str(i)+".jpg",((self.B_input[i][0]+1)*127.5).astype(np.uint8))
 
 
 def main():
