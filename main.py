@@ -46,6 +46,13 @@ class CycleGAN():
 
     def input_setup(self):
 
+        ''' 
+        This function basically setup variables for taking image input.
+
+        filenames_A/filenames_B -> takes the list of all training images
+        self.image_A/self.image_B -> Input image with each values ranging from [-1,1]
+        '''
+
         filenames_A = tf.train.match_filenames_once("./input/horse2zebra/trainA/*.jpg")    
         self.queue_length_A = tf.size(filenames_A)
         filenames_B = tf.train.match_filenames_once("./input/horse2zebra/trainB/*.jpg")    
@@ -65,15 +72,20 @@ class CycleGAN():
 
     def input_read(self, sess):
 
+
+        '''
+        It reads the input into from the image folder.
+
+        self.fake_images_A/self.fake_images_B -> List of generated images used for calculation of loss function of Discriminator
+        self.A_input/self.B_input -> Stores all the training images in python list
+        '''
+
         # Loading images into the tensors
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
 
         num_files_A = sess.run(self.queue_length_A)
         num_files_B = sess.run(self.queue_length_B)
-
-        images_A = []
-        images_B = []
 
         self.fake_images_A = np.zeros((pool_size,1,img_height, img_width, img_layer))
         self.fake_images_B = np.zeros((pool_size,1,img_height, img_width, img_layer))
@@ -98,6 +110,14 @@ class CycleGAN():
 
 
     def model_setup(self):
+
+        ''' This function sets up the model to train
+
+        self.input_A/self.input_B -> Set of training images.
+        self.fake_A/self.fake_B -> Generated images by corresponding generator of input_A and input_B
+        self.lr -> Learning rate variable
+        self.cyc_A/ self.cyc_B -> Images generated after feeding self.fake_A/self.fake_B to corresponding generator. This is use to calcualte cyclic loss
+        '''
 
         self.input_A = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_A")
         self.input_B = tf.placeholder(tf.float32, [batch_size, img_width, img_height, img_layer], name="input_B")
@@ -130,6 +150,13 @@ class CycleGAN():
             self.fake_pool_rec_B = build_gen_discriminator(self.fake_pool_B, "d_B")
 
     def loss_calc(self):
+
+        ''' In this function we are defining the variables for loss calcultions and traning model
+
+        d_loss_A/d_loss_B -> loss for discriminator A/B
+        g_loss_A/g_loss_B -> loss for generator A/B
+        *_trainer -> Variaous trainer for above loss functions
+        *_summ -> Summary variables for above loss functions'''
 
         cyc_loss = tf.reduce_mean(tf.abs(self.input_A-self.cyc_A)) + tf.reduce_mean(tf.abs(self.input_B-self.cyc_B))
         
@@ -181,6 +208,9 @@ class CycleGAN():
             imsave("./output/imgs/inputB_"+ str(epoch) + "_" + str(i)+".jpg",((self.B_input[i][0]+1)*127.5).astype(np.uint8))
 
     def fake_image_pool(self, num_fakes, fake, fake_pool):
+        ''' This function saves the generated image to corresponding pool of images.
+        In starting. It keeps on feeling the pool till it is full and then randomly selects an
+        already stored image and replace it with new one.'''
 
         if(num_fakes < pool_size):
             fake_pool[num_fakes] = fake
@@ -197,6 +227,9 @@ class CycleGAN():
 
 
     def train(self):
+
+
+        ''' Training Function '''
 
 
         # Load Dataset from the dataset folder
@@ -282,6 +315,9 @@ class CycleGAN():
             writer.add_graph(sess.graph)
 
     def test(self):
+
+
+        ''' Testing Function'''
 
         print("Testing the results")
 
