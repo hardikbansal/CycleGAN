@@ -26,4 +26,4 @@ We ran the model for [horse2zebra dataset](https://people.eecs.berkeley.edu/~tae
 
 ### Blog
 
-If you would like to understand the paper and see  how to implement it by your own, you can have look at the blog by [me](https://www.github.com/architrathore/CycleGAN/Blog/Blog.ipynb)
+If you would like to understand the paper and see  how to implement it by your own, you can have look at the blog by [me](https://www.github.com/architrathore/CycleGAN/tree/master/Blog/Blog.ipynb)
