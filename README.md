@@ -11,7 +11,7 @@ Tensorflow implementation of CycleGAN.
 CycleGAN model can be summarized in the following image. For full details about implementation and understanding CycleGAN you can read the tutorial at this [link](https://hardikbansal.github.io/CycleGANBlog/)
 
 <div style= "font-size: 1.5rem; font-style: italic; text-align: center; color: #99938E">
-<img src="images/model.jpg" alt="Model" style="width: 70%; padding: 10px;"/>
+<img src="images/model.jpg" alt="Model" style="width: 30%; padding: 10px;"/>
 </div>
 
 ##### Generator
