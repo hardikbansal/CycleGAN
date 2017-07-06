@@ -96,12 +96,12 @@ class CycleGAN():
 
         for i in range(max_images): 
             image_tensor = sess.run(self.image_A)
-            if(image_tensor.size() == self.img_size*self.batch_size):
+            if(image_tensor.size() == img_size*batch_size*img_layer):
                 self.A_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
         for i in range(max_images):
             image_tensor = sess.run(self.image_B)
-            if(image_tensor.size() == self.img_size*self.batch_size):
+            if(image_tensor.size() == img_size*batch_size*img_layer):
                 self.B_input[i] = image_tensor.reshape((batch_size,img_height, img_width, img_layer))
 
 
