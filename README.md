@@ -9,6 +9,8 @@ Tensorflow implementation of CycleGAN.
 
 If you would like to understand the paper and see  how to implement it by your own, you can have look at the blog by [me](https://hardikbansal.github.io/CycleGANBlog/)
 
+Both code and blog received mention on original project homepage over [here](https://junyanz.github.io/CycleGAN/)
+
 
 ### CycleGAN model
 
