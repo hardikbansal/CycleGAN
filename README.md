@@ -5,6 +5,10 @@ Tensorflow implementation of CycleGAN.
 2. [Paper](https://arxiv.org/abs/1703.10593)
 
 
+### Blog
+
+If you would like to understand the paper and see  how to implement it by your own, you can have look at the blog by [me](https://hardikbansal.github.io/CycleGANBlog/)
+
 
 ### CycleGAN model
 
@@ -47,6 +51,3 @@ We ran the model for [horse2zebra dataset](https://people.eecs.berkeley.edu/~tae
 2. We also think that this model is not good fit to change the shape of object. We tried to run the model for converting a men's face to a look alike women's face. For that we used celebA dataset but the results are not good and images produced are quite distorted.
 
 
-### Blog
-
-If you would like to understand the paper and see  how to implement it by your own, you can have look at the blog by [me](https://hardikbansal.github.io/CycleGANBlog/)
